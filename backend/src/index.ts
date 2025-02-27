@@ -11,7 +11,8 @@ import postEventChatRoutes from './routes/post-event-chat';
 import connectionRoutes from './routes/connections';
 import matchingRoutes from './routes/matching';
 import reportRoutes from './routes/reports';
-import verificationRoutes from './routes/verification'; // ✅ 추가
+import verificationRoutes from './routes/verification';
+import favoritesRoutes from './routes/favorites'; // ✅ 추가
 
 dotenv.config();
 
@@ -31,7 +32,8 @@ app.use('/api/post-event-chat', postEventChatRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/matching', matchingRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/verification', verificationRoutes); // ✅ 인증 API 등록
+app.use('/api/verification', verificationRoutes);
+app.use('/api/favorites', favoritesRoutes); // ✅ 즐겨찾기 API 등록
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
