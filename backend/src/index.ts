@@ -8,7 +8,8 @@ import reviewRoutes from './routes/reviews';
 import eventRoutes from './routes/events';
 import eventAttendanceRoutes from './routes/event-attendance';
 import postEventChatRoutes from './routes/post-event-chat';
-import connectionRoutes from './routes/connections'; // ✅ 추가
+import connectionRoutes from './routes/connections';
+import matchingRoutes from './routes/matching'; // ✅ 추가
 
 dotenv.config();
 
@@ -25,7 +26,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/event-attendance', eventAttendanceRoutes);
 app.use('/api/post-event-chat', postEventChatRoutes);
-app.use('/api/connections', connectionRoutes); // ✅ 네트워크 API 등록
+app.use('/api/connections', connectionRoutes);
+app.use('/api/matching', matchingRoutes); // ✅ 매칭 API 등록
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
