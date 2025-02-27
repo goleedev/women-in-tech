@@ -1,19 +1,19 @@
-import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import userRoutes from './routes/users';
-import sessionRoutes from './routes/sessions';
-import messageRoutes from './routes/messages';
-import reviewRoutes from './routes/reviews';
-import eventRoutes from './routes/events';
-import eventAttendanceRoutes from './routes/event-attendance';
-import postEventChatRoutes from './routes/post-event-chat';
+import express from 'express';
 import connectionRoutes from './routes/connections';
-import matchingRoutes from './routes/matching';
-import reportRoutes from './routes/reports';
-import verificationRoutes from './routes/verification';
+import eventAttendanceRoutes from './routes/event-attendance';
+import eventRoutes from './routes/events';
 import favoritesRoutes from './routes/favorites';
+import matchingRoutes from './routes/matching';
+import messageRoutes from './routes/messages';
 import notificationsRoutes from './routes/notifications'; // ✅ 추가
+import postEventChatRoutes from './routes/post-event-chat';
+import reportRoutes from './routes/reports';
+import reviewRoutes from './routes/reviews';
+import sessionRoutes from './routes/sessions';
+import userRoutes from './routes/users';
+import verificationRoutes from './routes/verification';
 
 dotenv.config();
 
@@ -21,6 +21,12 @@ const app = express();
 const PORT = process.env.PORT || 8008;
 
 app.use(cors());
+// app.use(
+//   cors({
+//     origin: ['http://localhost:3000', 'https://myapp.com'], // 허용할 프론트엔드 도메인
+//     credentials: true,
+//   })
+// );
 app.use(express.json());
 
 app.use('/api/users', userRoutes);
