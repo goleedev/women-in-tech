@@ -20,13 +20,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8008;
 
-app.use(cors());
-// app.use(
-//   cors({
-//     origin: ['http://localhost:3000', 'https://myapp.com'], // 허용할 프론트엔드 도메인
-//     credentials: true,
-//   })
-// );
+const allowedOrigins = [process.env.FRONTEND_URL || 'http://localhost:3000'];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true, // 인증 정보 포함 허용
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type,Authorization',
+  })
+);
+
 app.use(express.json());
 
 app.use('/api/users', userRoutes);
