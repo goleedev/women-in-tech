@@ -181,7 +181,7 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
 
     const user = result.rows[0];
 
-    // 🔹 NOTE: You should compare `password` using bcrypt (hashed passwords)
+    // ✅ Directly compare plain text passwords
     if (user.password !== password) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
