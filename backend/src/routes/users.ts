@@ -181,8 +181,7 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
 
     const user = result.rows[0];
 
-    // ✅ Directly compare plain text passwords
-    if (user.password !== password) {
+    if (user.password_hash !== password) {
       return res
         .status(401)
         .json({ error: 'Invalid email or password testtttt' });
