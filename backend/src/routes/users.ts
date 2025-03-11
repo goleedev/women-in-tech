@@ -183,7 +183,9 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
 
     // ✅ Directly compare plain text passwords
     if (user.password !== password) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res
+        .status(401)
+        .json({ error: 'Invalid email or password testtttt' });
     }
 
     return res.json({ message: 'Login successful', user });
