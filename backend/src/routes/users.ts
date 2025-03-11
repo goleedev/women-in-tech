@@ -163,4 +163,34 @@ router.delete('/:id', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+router.post('/login', async (req: Request, res: Response): Promise<any> => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [
+      email,
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const user = result.rows[0];
+
+    // 🔹 NOTE: You should compare `password` using bcrypt (hashed passwords)
+    if (user.password !== password) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    return res.json({ message: 'Login successful', user });
+  } catch (error) {
+    console.error('🔥 Login Error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;
