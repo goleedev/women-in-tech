@@ -16,8 +16,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await loginUser(email, password);
-      alert(`Welcome, ${user.name}!`);
-      router.push('/dashboard'); // 로그인 후 이동
+      console.log('🔍 API Response:', user); // ✅ Debug API response
+      localStorage.setItem('user', JSON.stringify(user));
+
+      alert(`Welcome, ${user.name || 'Unknown'}!`);
+      router.push('/dashboard');
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Login failed.');
     } finally {

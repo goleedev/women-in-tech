@@ -182,9 +182,7 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
     const user = result.rows[0];
 
     if (user.password_hash !== password) {
-      return res
-        .status(401)
-        .json({ error: 'Invalid email or password testtttt' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     return res.json({ message: 'Login successful', user });
