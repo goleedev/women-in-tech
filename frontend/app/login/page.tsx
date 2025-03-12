@@ -15,12 +15,19 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const user = await loginUser(email, password);
-      console.log('🔍 API Response:', user); // ✅ Debug API response
-      localStorage.setItem('user', JSON.stringify(user));
+      const response = await loginUser(email, password);
 
-      alert(`Welcome, ${user.name || 'Unknown'}!`);
-      router.push('/dashboard');
+      if (!response.ok) throw new Error('Login failed.');
+
+      const data = await response.json();
+
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data)); // ✅ Store entire response (including message)
+        alert(`Welcome, ${data.user.name}!`);
+        router.push('/dashboard');
+      } else {
+        alert('Invalid login response.');
+      }
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Login failed.');
     } finally {

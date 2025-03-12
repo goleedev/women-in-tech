@@ -2,34 +2,25 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-
-export type User = {
-  id: number;
-  name: string;
-  email: string;
-  country: string;
-  city: string;
-  job_title: string;
-  tech_stack: string[];
-  years_of_experience: number;
-  mentoring_topics: string[];
-  available_times: string[];
-  calcom_link?: string;
-  created_at: string;
-};
+import { User } from '@/types/user';
 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
 
-  console.log('🔍 User:', user); // ✅ Debug user data
-
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('user');
+      const storedUserData = localStorage.getItem('user');
 
-      if (storedUser) {
-        setUser(JSON.parse(storedUser)); // ✅ Correctly parsing the stored JSON
+      if (storedUserData) {
+        const parsedData = JSON.parse(storedUserData);
+
+        if (parsedData.user) {
+          setUser(parsedData.user);
+        } else {
+          console.warn('User object not found in localStorage.');
+          router.push('/login');
+        }
       } else {
         console.warn('No user data found. Redirecting...');
         router.push('/login');
@@ -38,25 +29,25 @@ export default function Dashboard() {
       console.error('Error parsing user data:', error);
       router.push('/login');
     }
-  }, []);
+  }, [router]);
 
-  if (!user) return <p>Loading...</p>; // ✅ Prevents rendering before data is loaded
+  if (!user) return <p>Loading...</p>; // ✅ Prevents undefined access
 
   return (
     <div className="max-w-md mx-auto mt-10">
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <div className="mt-4">
         <p>
-          <strong>Name:</strong> {user.name || 'N/A'}
+          <strong>Name:</strong> {user.name}
         </p>
         <p>
-          <strong>Email:</strong> {user.email || 'N/A'}
+          <strong>Email:</strong> {user.email}
         </p>
         <p>
-          <strong>Country:</strong> {user.country || 'N/A'}
+          <strong>Country:</strong> {user.country}
         </p>
         <p>
-          <strong>Job Title:</strong> {user.job_title || 'N/A'}
+          <strong>Job Title:</strong> {user.job_title}
         </p>
 
         <Button
