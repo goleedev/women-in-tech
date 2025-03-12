@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,15 +7,30 @@ import { MatchingRequest } from '@/types/matching';
 
 export default function RequestMentorPage() {
   const router = useRouter();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [user, setUser] = useState<{ id: number } | null>(null);
   const [techStack, setTechStack] = useState<string>('');
   const [experience, setExperience] = useState<number>(1);
   const [location, setLocation] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
+  // ✅ Ensure `localStorage` is accessed only on the client-side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (!user) {
+      alert('User not found. Please log in.');
+      return;
+    }
 
     try {
       const res = await fetch(
@@ -34,15 +49,14 @@ export default function RequestMentorPage() {
 
       if (!res.ok) throw new Error('Failed to send matching request.');
 
-      const data: MatchingRequest = await res.json(); // ✅ Now we use it
+      const data: MatchingRequest = await res.json();
       alert(
         `Matching request sent! Request ID: ${data.id}, Status: ${data.status}`
       );
 
-      // ✅ Store the request in localStorage so the user can track it later
       localStorage.setItem('matchingRequest', JSON.stringify(data));
 
-      router.push('/matching/status'); // Redirecting to status page
+      router.push('/matching/status');
     } catch (error) {
       alert(
         error instanceof Error ? error.message : 'Error submitting request.'
@@ -76,7 +90,7 @@ export default function RequestMentorPage() {
           value={location}
           onChange={(e) => setLocation(e.target.value)}
         />
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || !user}>
           {loading ? 'Sending...' : 'Request Mentor'}
         </Button>
       </form>
