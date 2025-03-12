@@ -3,17 +3,26 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-type User = {
+export type User = {
   id: number;
   name: string;
   email: string;
   country: string;
+  city: string;
   job_title: string;
+  tech_stack: string[];
+  years_of_experience: number;
+  mentoring_topics: string[];
+  available_times: string[];
+  calcom_link?: string;
+  created_at: string;
 };
 
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<User>();
+  const [user, setUser] = useState<User | null>(null);
+
+  console.log('🔍 User:', user); // ✅ Debug user data
 
   useEffect(() => {
     try {
