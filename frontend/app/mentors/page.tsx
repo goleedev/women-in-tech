@@ -1,15 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-
-type Mentor = {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  job_title: string;
-};
+import { Mentor } from '@/types/mentor';
 
 export default function MentorsPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
