@@ -13,12 +13,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <nav className="p-4 bg-gray-100 shadow">
-          <Link href="/" className="mr-4">
-            Home
+        <nav className="p-4 bg-gray-100 shadow gap-3">
+          <Link href="/dashboard" className="mr-4">
+            Dashboard
           </Link>
-          <a href="/users">Users</a>
-          <a href="/add-user">Add User</a>
+          <Link href="/mentors">Find a Mentor</Link>
         </nav>
         <main className="p-6">{children}</main>
       </body>
