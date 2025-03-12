@@ -31,16 +31,16 @@ export default function Dashboard() {
       {user ? (
         <div className="mt-4">
           <p>
-            <strong>Name:</strong> {user.name}
+            <strong>Name:</strong> <span>{user.name}</span>
           </p>
           <p>
-            <strong>Email:</strong> {user.email}
+            <strong>Email:</strong> <span>{user.email}</span>
           </p>
           <p>
-            <strong>Country:</strong> {user.country}
+            <strong>Country:</strong> <span>{user.country}</span>
           </p>
           <p>
-            <strong>Job Title:</strong> {user.job_title}
+            <strong>Job Title:</strong> <span>{user.job_title}</span>
           </p>
 
           <Button
