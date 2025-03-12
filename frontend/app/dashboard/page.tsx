@@ -16,46 +16,50 @@ export default function Dashboard() {
   const [user, setUser] = useState<User>();
 
   useEffect(() => {
-    // ✅ localStorage에서 유저 정보 불러오기
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      router.push('/login'); // 로그인 안 한 경우 로그인 페이지로 이동
+    try {
+      const storedUser = localStorage.getItem('user');
+
+      if (storedUser) {
+        setUser(JSON.parse(storedUser)); // ✅ Correctly parsing the stored JSON
+      } else {
+        console.warn('No user data found. Redirecting...');
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      router.push('/login');
     }
-  }, [router]);
+  }, []);
+
+  if (!user) return <p>Loading...</p>; // ✅ Prevents rendering before data is loaded
 
   return (
     <div className="max-w-md mx-auto mt-10">
       <h1 className="text-2xl font-bold">Dashboard</h1>
-      {user ? (
-        <div className="mt-4">
-          <p>
-            <strong>Name:</strong> <span>{user.name}</span>
-          </p>
-          <p>
-            <strong>Email:</strong> <span>{user.email}</span>
-          </p>
-          <p>
-            <strong>Country:</strong> <span>{user.country}</span>
-          </p>
-          <p>
-            <strong>Job Title:</strong> <span>{user.job_title}</span>
-          </p>
+      <div className="mt-4">
+        <p>
+          <strong>Name:</strong> {user.name || 'N/A'}
+        </p>
+        <p>
+          <strong>Email:</strong> {user.email || 'N/A'}
+        </p>
+        <p>
+          <strong>Country:</strong> {user.country || 'N/A'}
+        </p>
+        <p>
+          <strong>Job Title:</strong> {user.job_title || 'N/A'}
+        </p>
 
-          <Button
-            className="mt-4"
-            onClick={() => {
-              localStorage.removeItem('user');
-              router.push('/login');
-            }}
-          >
-            Logout
-          </Button>
-        </div>
-      ) : (
-        <p>Loading user data...</p>
-      )}
+        <Button
+          className="mt-4"
+          onClick={() => {
+            localStorage.removeItem('user');
+            router.push('/login');
+          }}
+        >
+          Logout
+        </Button>
+      </div>
     </div>
   );
 }
