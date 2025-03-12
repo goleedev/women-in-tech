@@ -5,15 +5,22 @@ import { MatchingRequest } from '@/types/matching';
 export default function MatchingStatusPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [matchingRequest, setMatchingRequest] =
-    useState<MatchingRequest | null>(null);
-  const [loading, setLoading] = useState(true);
+    useState<MatchingRequest | null>(
+      JSON.parse(localStorage.getItem('matchingRequest') || 'null')
+    );
+  const [loading, setLoading] = useState(!matchingRequest);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matching/${user.id}`)
-      .then((res) => res.json())
-      .then((data) => setMatchingRequest(data))
-      .catch((error) => console.error('❌ Error fetching request:', error))
-      .finally(() => setLoading(false));
+    if (!matchingRequest) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matching/${user.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setMatchingRequest(data);
+          localStorage.setItem('matchingRequest', JSON.stringify(data)); // Store latest request
+        })
+        .catch((error) => console.error('❌ Error fetching request:', error))
+        .finally(() => setLoading(false));
+    }
   }, []);
 
   if (loading) return <p>Loading...</p>;
