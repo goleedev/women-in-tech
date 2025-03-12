@@ -1,33 +1,41 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MatchingRequest } from '@/types/matching';
 
 export default function MatchingStatusPage() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [matchingRequest, setMatchingRequest] =
-    useState<MatchingRequest | null>(
-      JSON.parse(localStorage.getItem('matchingRequest') || 'null')
-    );
-  const [loading, setLoading] = useState(!matchingRequest);
+    useState<MatchingRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!matchingRequest) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matching/${user.id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setMatchingRequest(data);
-          localStorage.setItem('matchingRequest', JSON.stringify(data)); // Store latest request
-        })
-        .catch((error) => console.error('❌ Error fetching request:', error))
-        .finally(() => setLoading(false));
+    if (typeof window !== 'undefined') {
+      const storedRequest = localStorage.getItem('matchingRequest');
+      if (storedRequest) {
+        setMatchingRequest(JSON.parse(storedRequest));
+        setLoading(false);
+      } else {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matching/latest`)
+          .then((res) => {
+            if (!res.ok) throw new Error('Failed to fetch latest request.');
+            return res.json();
+          })
+          .then((data) => {
+            setMatchingRequest(data);
+            localStorage.setItem('matchingRequest', JSON.stringify(data));
+          })
+          .catch((err) => setError(err.message))
+          .finally(() => setLoading(false));
+      }
     }
   }, []);
 
   if (loading) return <p>Loading...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="max-w-md mx-auto mt-10">
-      <h1 className="text-2xl font-bold">Mentorship Request Status</h1>
+      <h1 className="text-2xl font-bold">Matching Request Status</h1>
       {matchingRequest ? (
         <div className="p-4 border rounded mt-4">
           <p>
@@ -52,7 +60,7 @@ export default function MatchingStatusPage() {
           </p>
         </div>
       ) : (
-        <p>No mentorship request found.</p>
+        <p>No matching request found.</p>
       )}
     </div>
   );
