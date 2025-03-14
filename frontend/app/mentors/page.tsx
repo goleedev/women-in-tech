@@ -15,7 +15,7 @@ interface Mentor {
   tech_stack: string[];
 }
 
-export default function MentorPage({
+export function MentorPage({
   mentors,
   menteeId,
 }: {
