@@ -16,6 +16,27 @@ router.get('/', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+router.get('/', async (req: Request, res: Response): Promise<any> => {
+  const role = req.query.role; // Check if role=mentor filter exists
+
+  try {
+    let query = 'SELECT * FROM users';
+    let params: any[] = [];
+
+    if (role === 'mentor') {
+      query += " WHERE job_title = 'mentor'";
+    }
+
+    const result = await pool.query(query, params);
+    return res.json(result.rows);
+  } catch (error) {
+    console.error('🔥 Database Error:', error);
+    return res
+      .status(500)
+      .json({ error: 'Database error', details: (error as Error).message });
+  }
+});
+
 // ✅ 특정 유저 조회 (GET /api/users/:id)
 router.get('/:id', async (req: Request, res: Response): Promise<any> => {
   const userId = req.params.id;

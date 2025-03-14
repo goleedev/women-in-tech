@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import MentorCard from './MentorCard';
 import { fetchMentors } from '@/api/matching';
 import { Mentor } from '@/types/matching';
-import MentorCard from './MentorCard';
 
 export default function MentorList() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
