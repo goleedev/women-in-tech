@@ -11,7 +11,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <nav className="p-4 bg-gray-100 shadow gap-3">
           <Link href="/dashboard" className="mr-4">

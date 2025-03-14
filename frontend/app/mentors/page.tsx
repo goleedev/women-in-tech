@@ -1,38 +1,106 @@
 'use client';
+
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Mentor } from '@/types/mentor';
+import {
+  requestMentorship,
+  getMatchingStatus,
+  cancelMentorshipRequest,
+} from '@/api/matching';
 
-export default function MentorsPage() {
-  const [mentors, setMentors] = useState<Mentor[]>([]);
+interface Mentor {
+  id: number;
+  name: string;
+  job_title: string;
+  country: string;
+  tech_stack: string[];
+}
 
+export default function MentorPage({
+  mentors,
+  menteeId,
+}: {
+  mentors: Mentor[];
+  menteeId: number;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingRequestId, setPendingRequestId] = useState<number | null>(null);
+
+  // ✅ Check if mentee already has a pending request
   useEffect(() => {
-    // ✅ Fetch mentors from API
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`)
-      .then((res) => res.json())
-      .then((data) => setMentors(data))
-      .catch((error) => console.error('❌ Error fetching mentors:', error));
-  }, []);
+    async function fetchStatus() {
+      try {
+        const status = await getMatchingStatus(menteeId);
+        if (status.status === 'pending') {
+          setPendingRequestId(status.id); // ✅ Store request ID
+        }
+      } catch (err) {
+        console.error(err);
+        setPendingRequestId(null);
+      }
+    }
+    fetchStatus();
+  }, [menteeId]);
+
+  // ✅ Handle requesting mentorship
+  const handleRequest = async (mentorId: number) => {
+    try {
+      setLoading(true);
+      const response = await requestMentorship(menteeId, mentorId);
+      setPendingRequestId(response.id); // ✅ Save request ID after success
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to request mentorship'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Handle canceling request
+  const handleCancel = async () => {
+    if (!pendingRequestId) return;
+    try {
+      setLoading(true);
+      await cancelMentorshipRequest(pendingRequestId);
+      setPendingRequestId(null); // ✅ Reset request ID
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel request');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <h1 className="text-2xl font-bold">Find a Mentor</h1>
-      {mentors.length === 0 ? (
-        <p>Loading mentors...</p>
-      ) : (
-        <ul className="mt-4">
-          {mentors.map((mentor) => (
-            <li key={mentor.id} className="p-2 border rounded mt-2">
-              <p>
-                <strong>{mentor.name}</strong>
-              </p>
-              <p>{mentor.job_title}</p>
-              <p>{mentor.country}</p>
-              <Button className="mt-2">Request Mentorship</Button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div>
+      <h2 className="text-xl font-bold">Find a Mentor</h2>
+      {error && <p className="text-red-500">{error}</p>}
+      <ul>
+        {mentors?.map((mentor) => (
+          <li key={mentor.id} className="p-4 border mb-2">
+            <strong>{mentor.name}</strong> <br />
+            {mentor.job_title} <br />
+            {mentor.country} <br />
+            {pendingRequestId ? (
+              <button
+                onClick={handleCancel}
+                disabled={loading}
+                className="bg-red-500 text-white p-2 rounded mt-2"
+              >
+                {loading ? 'Canceling...' : 'Cancel Request'}
+              </button>
+            ) : (
+              <button
+                onClick={() => handleRequest(mentor.id)}
+                disabled={loading}
+                className="bg-blue-500 text-white p-2 rounded mt-2"
+              >
+                {loading ? 'Requesting...' : 'Request Mentorship'}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
