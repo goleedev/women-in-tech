@@ -1,12 +1,15 @@
 import { Mentor } from '@/types/matching';
 
 export async function fetchMentors(): Promise<Mentor[]> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/users?role=mentor`
-  );
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`);
   if (!res.ok) throw new Error('Failed to fetch mentors');
-  return res.json();
+
+  const users = await res.json();
+
+  // ✅ `job_title`이 존재하는 유저만 멘토로 간주
+  return users.filter((user: Mentor) => user.job_title);
 }
+
 export async function requestMentorship(menteeId: number, mentorId: number) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matching`, {
     method: 'POST',

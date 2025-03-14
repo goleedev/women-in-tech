@@ -5,30 +5,25 @@ const router: Router = express.Router();
 
 // ✅ 1. 멘티가 매칭 요청 보내기 (POST /api/matching)
 router.post('/', async (req: Request, res: Response): Promise<any> => {
-  const {
-    mentee_id,
-    preferred_tech_stack,
-    preferred_experience,
-    preferred_location,
-  } = req.body;
+  const { mentee_id, mentor_id } = req.body;
 
-  if (!mentee_id || !preferred_tech_stack || !preferred_experience) {
+  if (!mentee_id || !mentor_id) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
-    const result = await pool.query(
-      `INSERT INTO matching_requests (mentee_id, preferred_tech_stack, preferred_experience, preferred_location) 
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [
-        mentee_id,
-        preferred_tech_stack,
-        preferred_experience,
-        preferred_location,
-      ]
+    await pool.query(
+      "INSERT INTO matching_requests (mentee_id, mentor_id, status) VALUES ($1, $2, 'pending')",
+      [mentee_id, mentor_id]
     );
 
-    return res.status(201).json(result.rows[0]);
+    // ✅ mentor_id가 멘토 역할이 없으면 자동 업데이트
+    await pool.query(
+      "UPDATE users SET job_title = 'Mentor' WHERE id = $1 AND job_title IS NULL",
+      [mentor_id]
+    );
+
+    return res.status(201).json({ message: 'Mentorship request sent' });
   } catch (error) {
     console.error('🔥 Database Error:', error);
     return res
@@ -123,6 +118,42 @@ router.put('/:id/reject', async (req: Request, res: Response): Promise<any> => {
     }
 
     return res.json(result.rows[0]);
+  } catch (error) {
+    console.error('🔥 Database Error:', error);
+    return res
+      .status(500)
+      .json({ error: 'Database error', details: (error as Error).message });
+  }
+});
+
+router.delete('/:id', async (req: Request, res: Response): Promise<any> => {
+  const requestId = req.params.id;
+
+  try {
+    // ✅ 요청 삭제
+    const result = await pool.query(
+      'DELETE FROM matching_requests WHERE id = $1 RETURNING mentor_id',
+      [requestId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    const mentorId = result.rows[0].mentor_id;
+
+    // ✅ mentor_id가 더 이상 요청을 받은 게 없으면 job_title을 NULL로 변경
+    await pool.query(
+      `
+      UPDATE users 
+      SET job_title = NULL 
+      WHERE id = $1 AND NOT EXISTS (
+        SELECT 1 FROM matching_requests WHERE mentor_id = $1
+      )`,
+      [mentorId]
+    );
+
+    return res.json({ message: 'Mentorship request canceled' });
   } catch (error) {
     console.error('🔥 Database Error:', error);
     return res

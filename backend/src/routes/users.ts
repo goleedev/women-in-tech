@@ -6,28 +6,9 @@ const router: Router = express.Router();
 // ✅ 모든 유저 조회 (GET /api/users)
 router.get('/', async (req: Request, res: Response): Promise<any> => {
   try {
-    const result = await pool.query('SELECT * FROM users');
-    return res.json(result.rows);
-  } catch (error) {
-    console.error('🔥 Database Error:', error);
-    return res
-      .status(500)
-      .json({ error: 'Database error', details: (error as Error).message });
-  }
-});
-
-router.get('/', async (req: Request, res: Response): Promise<any> => {
-  const role = req.query.role; // Check if role=mentor filter exists
-
-  try {
-    let query = 'SELECT * FROM users';
-    let params: any[] = [];
-
-    if (role === 'mentor') {
-      query += " WHERE job_title = 'mentor'";
-    }
-
-    const result = await pool.query(query, params);
+    const result = await pool.query(
+      'SELECT * FROM users WHERE job_title IS NOT NULL'
+    );
     return res.json(result.rows);
   } catch (error) {
     console.error('🔥 Database Error:', error);
@@ -74,7 +55,7 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
     calcom_link, // ✅ 추가된 필드
   } = req.body;
 
-  if (!name || !email || !password_hash || !job_title) {
+  if (!name || !email || !password_hash) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
