@@ -1,9 +1,7 @@
-export type MatchingRequest = {
+export type Mentor = {
   id: number;
-  mentee_id: number;
-  preferred_tech_stack: string[];
-  preferred_experience: number;
-  preferred_location?: string;
-  status: 'pending' | 'matched' | 'rejected';
-  created_at: string;
+  name: string;
+  job_title: string;
+  country: string;
+  tech_stack: string[];
 };
