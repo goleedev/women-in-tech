@@ -33,9 +33,11 @@ export default function MentorFilters({
 
       {/* 🔹 기술 스택 필터 */}
       <Select value={techStack} onValueChange={setTechStack}>
-        <SelectTrigger>{techStack || 'Filter by Tech Stack'}</SelectTrigger>
+        <SelectTrigger>
+          {techStack === 'all' ? 'Filter by Tech Stack' : techStack}
+        </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All</SelectItem>
+          <SelectItem value="all">All</SelectItem>
           <SelectItem value="React">React</SelectItem>
           <SelectItem value="Node.js">Node.js</SelectItem>
           <SelectItem value="Python">Python</SelectItem>

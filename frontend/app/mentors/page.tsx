@@ -23,11 +23,11 @@ export default function MentorsPage() {
     loadMentors();
   }, []);
 
-  // ✅ 필터링 적용
+  // ✅ "all"이면 필터링 X
   const filteredMentors = mentors.filter(
     (mentor) =>
       mentor.name.toLowerCase().includes(search.toLowerCase()) &&
-      (techStack ? mentor.tech_stack.includes(techStack) : true) // 🔹 techStack 필터 적용
+      (techStack === 'all' || mentor.tech_stack.includes(techStack))
   );
 
   return (
