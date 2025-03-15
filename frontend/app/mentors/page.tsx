@@ -23,7 +23,6 @@ export default function MentorsPage() {
     loadMentors();
   }, []);
 
-  // ✅ "all"이면 필터링 X
   const filteredMentors = mentors.filter(
     (mentor) =>
       mentor.name.toLowerCase().includes(search.toLowerCase()) &&
