@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  fetchMentors,
-  requestMentorship,
-  fetchUserRequests,
-} from '@/api/matching';
+import { fetchMentors, requestMentorship } from '@/api/matching';
 import MentorFilters from './components/MentorFilters';
 import { Mentor, MentorshipRequest } from '@/types/matching';
+import { useAuth } from '../hooks/useAuth';
 
 export default function MentorsPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
@@ -15,30 +12,37 @@ export default function MentorsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
   const [techStack, setTechStack] = useState<string>('all');
-  const userId = 1; // ✅ 실제 로그인된 유저 ID로 변경 필요
+
+  const { user } = useAuth();
 
   useEffect(() => {
-    async function loadMentorsAndRequests() {
+    async function loadMentors() {
       setLoading(true);
       try {
-        const [mentorsData, requestsData] = await Promise.all([
-          fetchMentors(),
-          fetchUserRequests(userId),
-        ]);
-        setMentors(mentorsData);
-        setRequests(requestsData);
+        if (!user) return;
+
+        const data = await fetchMentors(user.id);
+        setMentors(data);
       } catch (error) {
-        console.error('Failed to load data:', error);
+        console.error('Failed to fetch mentors:', error);
       } finally {
         setLoading(false);
       }
     }
-    loadMentorsAndRequests();
+    loadMentors();
   }, []);
+
+  const filteredMentors = mentors.filter(
+    (mentor) =>
+      mentor.name.toLowerCase().includes(search.toLowerCase()) &&
+      (techStack === 'all' || mentor.tech_stack.includes(techStack))
+  );
 
   const handleRequestMentorship = async (mentorId: number) => {
     try {
-      const newRequest = await requestMentorship(userId, mentorId);
+      if (!user) return;
+
+      const newRequest = await requestMentorship(user.id, mentorId);
 
       // ✅ 요청이 성공하면 `requests` 상태 업데이트
       setRequests((prev) => [...prev, newRequest]);
@@ -49,12 +53,6 @@ export default function MentorsPage() {
 
   const isRequestSent = (mentorId: number) =>
     requests.some((req) => req.mentor_id === mentorId);
-
-  const filteredMentors = mentors.filter(
-    (mentor) =>
-      mentor.name.toLowerCase().includes(search.toLowerCase()) &&
-      (techStack === 'all' || mentor.tech_stack.includes(techStack))
-  );
 
   return (
     <div className="max-w-2xl mx-auto mt-10">

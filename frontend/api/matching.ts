@@ -23,14 +23,16 @@ export async function fetchUserRequests(
 /**
  * 🔹 멘토 리스트 가져오기 (job_title = 'mentor'인 유저만 반환)
  */
-export async function fetchMentors(): Promise<Mentor[]> {
+export async function fetchMentors(loggedInUserId: number): Promise<Mentor[]> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`);
   if (!res.ok) throw new Error('Failed to fetch mentors');
 
   const users = await res.json();
 
-  // ✅ `job_title === "mentor"`인 유저만 반환
-  return users.filter((user: Mentor) => user.job_title === 'mentor');
+  // ✅ `job_title`이 존재하는 유저만 멘토로 간주하고, 현재 로그인한 유저 제외
+  return users.filter(
+    (user: Mentor) => user.job_title && user.id !== loggedInUserId
+  );
 }
 
 /**
