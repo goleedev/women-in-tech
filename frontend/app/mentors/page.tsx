@@ -1,25 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { fetchMentors } from '@/api/matching';
-import { Mentor } from '@/types/matching';
-import MentorCard from './components/MentorCard';
+import { useState, useEffect } from 'react';
 import MentorFilters from './components/MentorFilters';
+import { Mentor } from '@/types/matching';
 
 export default function MentorsPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
-  const [search, setSearch] = useState('');
-  const [techStack, setTechStack] = useState('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>('');
+  const [techStack, setTechStack] = useState<string>('all');
 
   useEffect(() => {
-    const loadMentors = async () => {
+    async function loadMentors() {
+      setLoading(true);
       try {
         const data = await fetchMentors();
         setMentors(data);
       } catch (error) {
         console.error('Failed to fetch mentors:', error);
+      } finally {
+        setLoading(false);
       }
-    };
+    }
     loadMentors();
   }, []);
 
@@ -30,23 +33,34 @@ export default function MentorsPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto mt-8">
-      <h1 className="text-2xl font-bold mb-4">Find a Mentor</h1>
+    <div className="max-w-2xl mx-auto mt-10">
+      <h1 className="text-2xl font-bold">Find a Mentor</h1>
+
       <MentorFilters
         search={search}
         setSearch={setSearch}
         techStack={techStack}
         setTechStack={setTechStack}
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredMentors.length > 0 ? (
-          filteredMentors.map((mentor) => (
-            <MentorCard key={mentor.id} mentor={mentor} menteeId={1} />
-          ))
-        ) : (
-          <p className="text-center text-gray-500">No mentors found</p>
-        )}
-      </div>
+
+      {loading ? (
+        <p>Loading mentors...</p>
+      ) : filteredMentors.length > 0 ? (
+        <ul>
+          {filteredMentors.map((mentor) => (
+            <li key={mentor.id} className="mt-4">
+              <h2 className="font-bold">{mentor.name}</h2>
+              <p>{mentor.job_title}</p>
+              <p>{mentor.country}</p>
+              <button className="border px-4 py-2 mt-2">
+                Request Mentorship
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No mentors found</p>
+      )}
     </div>
   );
 }
