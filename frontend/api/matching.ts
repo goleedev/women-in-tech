@@ -1,4 +1,14 @@
-import { Mentor } from '@/types/matching';
+import { Mentor, MentorshipRequest } from '@/types/matching';
+
+export async function fetchUserRequests(
+  userId: number
+): Promise<MentorshipRequest[]> {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/matching/${userId}`
+  );
+  if (!res.ok) throw new Error('Failed to fetch mentorship requests');
+  return res.json();
+}
 
 export async function fetchMentors(): Promise<Mentor[]> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`);
