@@ -1,75 +1,54 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   fetchMentors,
-  fetchUserRequests,
   requestMentorship,
-  cancelMentorshipRequest,
+  fetchUserRequests,
 } from '@/api/matching';
-import { useState, useEffect } from 'react';
 import MentorFilters from './components/MentorFilters';
 import { Mentor, MentorshipRequest } from '@/types/matching';
 
 export default function MentorsPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [requests, setRequests] = useState<MentorshipRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
   const [techStack, setTechStack] = useState<string>('all');
-
-  const [requests, setRequests] = useState<MentorshipRequest[]>([]);
   const userId = 1; // ✅ 실제 로그인된 유저 ID로 변경 필요
 
   useEffect(() => {
-    async function loadMentors() {
+    async function loadMentorsAndRequests() {
       setLoading(true);
       try {
-        const data = await fetchMentors();
-        setMentors(data);
+        const [mentorsData, requestsData] = await Promise.all([
+          fetchMentors(),
+          fetchUserRequests(userId),
+        ]);
+        setMentors(mentorsData);
+        setRequests(requestsData);
       } catch (error) {
-        console.error('Failed to fetch mentors:', error);
+        console.error('Failed to load data:', error);
       } finally {
         setLoading(false);
       }
     }
-
-    async function loadRequests() {
-      try {
-        const data = await fetchUserRequests(userId);
-        setRequests(data);
-      } catch (error) {
-        console.error('Failed to fetch requests:', error);
-      }
-    }
-
-    loadMentors();
-    loadRequests();
+    loadMentorsAndRequests();
   }, []);
 
   const handleRequestMentorship = async (mentorId: number) => {
     try {
-      await requestMentorship(userId, mentorId);
-      setRequests([
-        ...requests,
-        { mentee_id: userId, mentor_id: mentorId, status: 'pending' },
-      ]);
+      const newRequest = await requestMentorship(userId, mentorId);
+
+      // ✅ 요청이 성공하면 `requests` 상태 업데이트
+      setRequests((prev) => [...prev, newRequest]);
     } catch (error) {
       console.error('Failed to request mentorship:', error);
     }
   };
 
-  const handleCancelRequest = async (mentorId: number) => {
-    try {
-      const requestToCancel = requests.find(
-        (req) => req.mentor_id === mentorId
-      );
-      if (requestToCancel) {
-        await cancelMentorshipRequest(requestToCancel.id);
-        setRequests(requests.filter((req) => req.mentor_id !== mentorId));
-      }
-    } catch (error) {
-      console.error('Failed to cancel mentorship request:', error);
-    }
-  };
+  const isRequestSent = (mentorId: number) =>
+    requests.some((req) => req.mentor_id === mentorId);
 
   const filteredMentors = mentors.filter(
     (mentor) =>
@@ -97,22 +76,19 @@ export default function MentorsPage() {
               <h2 className="font-bold">{mentor.name}</h2>
               <p>{mentor.job_title}</p>
               <p>{mentor.country}</p>
-
-              {requests.some((req) => req.mentor_id === mentor.id) ? (
-                <button
-                  onClick={() => handleCancelRequest(mentor.id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded"
-                >
-                  Cancel Request
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleRequestMentorship(mentor.id)}
-                  className="bg-blue-500 text-white px-3 py-1 rounded"
-                >
-                  Request Mentorship
-                </button>
-              )}
+              <button
+                className={`border px-4 py-2 mt-2 ${
+                  isRequestSent(mentor.id)
+                    ? 'opacity-50 cursor-not-allowed'
+                    : ''
+                }`}
+                onClick={() => handleRequestMentorship(mentor.id)}
+                disabled={isRequestSent(mentor.id)}
+              >
+                {isRequestSent(mentor.id)
+                  ? 'Request Sent'
+                  : 'Request Mentorship'}
+              </button>
             </li>
           ))}
         </ul>
