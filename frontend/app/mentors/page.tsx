@@ -14,16 +14,13 @@ export default function MentorsPage() {
   const [search, setSearch] = useState<string>('');
   const [techStack, setTechStack] = useState<string>('all');
 
-  const { user } = useAuth(); // ✅ 로그인 정보 가져오기
+  const { user } = useAuth();
 
   useEffect(() => {
     async function loadMentors() {
       setLoading(true);
       try {
-        if (!user) return;
-
-        console.log('user:', user);
-
+        if (!user) return; // If user is not logged in, don't fetch
         const data = await fetchMentors(user.id);
         setMentors(data);
       } catch (error) {
@@ -32,11 +29,7 @@ export default function MentorsPage() {
         setLoading(false);
       }
     }
-    if (user) {
-      loadMentors();
-    } else {
-      setLoading(false); // 로그인 안 된 경우에도 로딩 false로 변경
-    }
+    loadMentors();
   }, [user]);
 
   const filteredMentors = mentors.filter(
@@ -46,10 +39,12 @@ export default function MentorsPage() {
   );
 
   const handleRequestMentorship = async (mentorId: number) => {
-    if (!user) return; // ✅ 로그인되지 않았으면 요청 불가능
-
     try {
+      if (!user) return;
+
       const newRequest = await requestMentorship(user.id, mentorId);
+
+      // ✅ 요청이 성공하면 `requests` 상태 업데이트
       setRequests((prev) => [...prev, newRequest]);
     } catch (error) {
       console.error('Failed to request mentorship:', error);
@@ -63,53 +58,54 @@ export default function MentorsPage() {
     <div className="max-w-2xl mx-auto mt-10">
       <h1 className="text-2xl font-bold">Find a Mentor</h1>
 
-      {!user && (
-        <p className="text-red-500 mb-4">
-          You must be logged in to request mentorship.{' '}
-          <Link href="/login" className="underline text-blue-600">
-            Login here
-          </Link>
+      {/* 🔹 로그인 안 한 경우 */}
+      {!user ? (
+        <p className="mt-4">
+          You must be{' '}
+          <Link href="/login" className="text-blue-500 underline">
+            logged in
+          </Link>{' '}
+          to request a mentor.
         </p>
-      )}
-
-      <MentorFilters
-        search={search}
-        setSearch={setSearch}
-        techStack={techStack}
-        setTechStack={setTechStack}
-      />
-
-      {loading ? (
-        <p>Loading mentors...</p>
-      ) : filteredMentors.length > 0 ? (
-        <ul>
-          {filteredMentors.map((mentor) => (
-            <li key={mentor.id} className="mt-4">
-              <h2 className="font-bold">{mentor.name}</h2>
-              <p>{mentor.job_title}</p>
-              <p>{mentor.country}</p>
-              {user ? (
-                <button
-                  className={`border px-4 py-2 mt-2 ${
-                    isRequestSent(mentor.id)
-                      ? 'opacity-50 cursor-not-allowed'
-                      : ''
-                  }`}
-                  onClick={() => handleRequestMentorship(mentor.id)}
-                  disabled={isRequestSent(mentor.id)}
-                >
-                  {isRequestSent(mentor.id)
-                    ? 'Request Sent'
-                    : 'Request Mentorship'}
-                </button>
-              ) : (
-                <p className="text-gray-500">Login to request mentorship</p>
-              )}
-            </li>
-          ))}
-        </ul>
       ) : (
-        <p>No mentors found</p>
+        <>
+          {/* 🔹 검색 & 필터 */}
+          <MentorFilters
+            search={search}
+            setSearch={setSearch}
+            techStack={techStack}
+            setTechStack={setTechStack}
+          />
+
+          {loading ? (
+            <p>Loading mentors...</p>
+          ) : filteredMentors.length > 0 ? (
+            <ul>
+              {filteredMentors.map((mentor) => (
+                <li key={mentor.id} className="mt-4">
+                  <h2 className="font-bold">{mentor.name}</h2>
+                  <p>{mentor.job_title}</p>
+                  <p>{mentor.country}</p>
+                  <button
+                    className={`border px-4 py-2 mt-2 ${
+                      isRequestSent(mentor.id)
+                        ? 'opacity-50 cursor-not-allowed'
+                        : ''
+                    }`}
+                    onClick={() => handleRequestMentorship(mentor.id)}
+                    disabled={isRequestSent(mentor.id)}
+                  >
+                    {isRequestSent(mentor.id)
+                      ? 'Request Sent'
+                      : 'Request Mentorship'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No mentors found</p>
+          )}
+        </>
       )}
     </div>
   );

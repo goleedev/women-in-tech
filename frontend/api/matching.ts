@@ -28,15 +28,11 @@ export async function fetchMentors(loggedInUserId: number): Promise<Mentor[]> {
   if (!res.ok) throw new Error('Failed to fetch mentors');
 
   const users = await res.json();
-  console.log('Users fetched from API:', users);
 
-  // ✅ `job_title`이 존재하는 유저만 멘토로 간주하고, 현재 로그인한 유저 제외
-  const mentors = users.filter(
-    (user: Mentor) => user.job_title && user.id !== loggedInUserId
+  // ✅ `job_title`이 존재하는 유저만 멘토로 간주하고, 현재 로그인한 유저는 제외
+  return users.filter(
+    (user: Mentor) => user.job_title !== null && user.id !== loggedInUserId
   );
-
-  console.log('Filtered mentors:', mentors);
-  return mentors;
 }
 
 /**
