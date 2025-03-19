@@ -27,12 +27,17 @@ export default function EventsPage() {
     const getEvents = async () => {
       try {
         setLoading(true);
+        console.log(
+          'Fetching events from:',
+          process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1'
+        );
         const data = await fetchEvents();
+        console.log('Received events data:', data);
         setEvents(data.events || []);
         setError(null);
       } catch (err) {
+        console.error('Error details:', err);
         setError('Failed to fetch events. Please try again later.');
-        console.error(err);
       } finally {
         setLoading(false);
       }
