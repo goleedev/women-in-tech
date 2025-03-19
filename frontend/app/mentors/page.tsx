@@ -40,11 +40,17 @@ export default function MentorsPage() {
 
   const handleRequestMentorship = async (mentorId: number) => {
     try {
-      if (!user) return;
+      if (!user?.id) {
+        console.error('User is not logged in');
+        return;
+      }
+
+      console.log(
+        `Requesting mentorship: Mentee(${user.id}) → Mentor(${mentorId})`
+      );
 
       const newRequest = await requestMentorship(user.id, mentorId);
 
-      // ✅ 요청이 성공하면 `requests` 상태 업데이트
       setRequests((prev) => [...prev, newRequest]);
     } catch (error) {
       console.error('Failed to request mentorship:', error);

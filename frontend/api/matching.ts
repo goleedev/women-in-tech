@@ -39,14 +39,20 @@ export async function fetchMentors(loggedInUserId: number): Promise<Mentor[]> {
  * 🔹 멘토십 요청 보내기 (멘티 -> 멘토)
  */
 export async function requestMentorship(
-  menteeId: number,
+  menteeId: number | undefined, // Ensure menteeId is defined
   mentorId: number
 ): Promise<MentorshipRequest> {
+  if (!menteeId || !mentorId) {
+    throw new Error('Invalid mentee_id or mentor_id');
+  }
+
   const requestData: MentorshipRequestDraft = {
     mentee_id: menteeId,
     mentor_id: mentorId,
-    status: 'pending', // ✅ 기본 값 설정
+    status: 'pending',
   };
+
+  console.log('Sending mentorship request:', requestData);
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matching`, {
     method: 'POST',
@@ -54,11 +60,13 @@ export async function requestMentorship(
     body: JSON.stringify(requestData),
   });
 
-  if (!res.ok) throw new Error('Failed to request mentorship');
+  if (!res.ok) {
+    const errorData = await res.json();
+    console.error('Failed requestMentorship:', errorData);
+    throw new Error(errorData.error || 'Failed to request mentorship');
+  }
 
-  // ✅ 응답을 `MentorshipRequest` 타입으로 변환
-  const responseData: MentorshipRequest = await res.json();
-  return responseData;
+  return res.json();
 }
 
 /**
