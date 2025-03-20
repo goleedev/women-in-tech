@@ -6,6 +6,10 @@ import { config } from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import eventRoutes from './routes/eventRoutes'; // Add this line
 import userRoutes from './routes/userRoutes'; // Add this line if needed
+import mentorshipRoutes from './routes/mentorshipRoutes';
+import chatRoutes from './routes/chatRoutes';
+import notificationRoutes from './routes/notificationRoutes';
+import tagRoutes from './routes/tagRoutes';
 
 // 환경 변수 로드
 config();
@@ -35,6 +39,10 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/events', eventRoutes); // Add this line
 app.use('/api/v1/users', userRoutes); // Add this line if needed
+app.use('/api/v1/mentorship', mentorshipRoutes);
+app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/tags', tagRoutes);
 
 // 404 에러 처리
 app.use((req: Request, res: Response) => {
