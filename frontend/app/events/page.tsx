@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchEvents } from '@/app/services/api';
+import { eventAPI } from '@/app/services/api';
 import Link from 'next/link';
 
 interface Event {
@@ -31,7 +31,7 @@ export default function EventsPage() {
           'Fetching events from:',
           process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1'
         );
-        const data = await fetchEvents();
+        const data = await eventAPI.getEvents();
         console.log('Received events data:', data);
         setEvents(data.events || []);
         setError(null);
