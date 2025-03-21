@@ -1,11 +1,16 @@
-// src/app/layout.tsx
+// app/layout.tsx
 import './globals.css';
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Inter } from 'next/font/google';
+import Header from '@/app/components/layout/Header';
+import Footer from '@/app/components/layout/Footer';
+import { AuthProvider } from '@/app/context/AuthContext';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Women in Tech Networking Platform',
-  description: 'A platform for women in tech to network and find events',
+  description: '여성 기술인을 위한 네트워킹 및 이벤트 플랫폼',
 };
 
 export default function RootLayout({
@@ -14,27 +19,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <nav className="bg-blue-600 text-white">
-          <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-            <Link href="/">
-              <span className="font-bold text-xl">WiT Network</span>
-            </Link>
-            <div className="space-x-6">
-              <Link href="/events">
-                <span className="hover:underline">Events</span>
-              </Link>
-              <Link href="/mentorship">
-                <span className="hover:underline">Mentorship</span>
-              </Link>
-              <Link href="/chat">
-                <span className="hover:underline">Chat</span>
-              </Link>
-            </div>
+    <html lang="ko" suppressHydrationWarning>
+      <body className={inter.className}>
+        <AuthProvider>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow container mx-auto px-4 py-8">
+              {children}
+            </main>
+            <Footer />
           </div>
-        </nav>
-        <main>{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );
