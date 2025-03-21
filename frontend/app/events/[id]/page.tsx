@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getEventById } from '@/app/services/api';
+import { getEventById } from '@/app/lib/api/api';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
