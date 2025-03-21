@@ -11,6 +11,7 @@ export interface User {
   bio?: string;
   profile_image_url?: string;
   is_verified?: boolean;
+  tags?: string[];
 }
 
 export interface Event {
