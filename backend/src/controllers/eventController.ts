@@ -353,15 +353,42 @@ export const attendEvent: RequestHandler = async (
       return;
     }
 
-    // 참가 신청 로직
-    await pool.query(
-      'INSERT INTO event_attendees (event_id, user_id) VALUES ($1, $2)',
+    // 이벤트 존재 여부 확인
+    const eventCheck = await pool.query('SELECT * FROM events WHERE id = $1', [
+      eventId,
+    ]);
+
+    if (eventCheck.rows.length === 0) {
+      res
+        .status(404)
+        .json({ success: false, message: '이벤트를 찾을 수 없습니다' });
+      return;
+    }
+
+    // 이미 참가 신청한 경우 체크
+    const attendeeCheck = await pool.query(
+      'SELECT * FROM event_attendees WHERE event_id = $1 AND user_id = $2',
       [eventId, userId]
     );
 
-    res
-      .status(200)
-      .json({ success: true, message: '이벤트 참가 신청이 완료되었습니다' });
+    if (attendeeCheck.rows.length > 0) {
+      res
+        .status(400)
+        .json({ success: false, message: '이미 참가 신청한 이벤트입니다' });
+      return;
+    }
+
+    // 참가 신청 로직
+    await pool.query(
+      'INSERT INTO event_attendees (event_id, user_id, status) VALUES ($1, $2, $3)',
+      [eventId, userId, 'registered'] // status 값 추가
+    );
+
+    res.status(200).json({
+      success: true,
+      message: '이벤트 참가 신청이 완료되었습니다',
+      status: 'registered',
+    });
   } catch (error) {
     console.error('이벤트 참가 신청 에러:', error);
     res.status(500).json({
@@ -468,6 +495,22 @@ export const getEventById: RequestHandler = async (
 ): Promise<void> => {
   try {
     const eventId = req.params.id;
+    const authHeader = req.headers.authorization;
+    let userId = null;
+
+    // 인증된 사용자인 경우 ID 추출
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1];
+        const decoded: any = jwt.verify(
+          token,
+          process.env.JWT_SECRET as string
+        );
+        userId = decoded.id;
+      } catch (error) {
+        // 토큰 검증 실패, 무시하고 진행
+      }
+    }
 
     // 이벤트 기본 정보 조회
     const eventResult = await pool.query(
@@ -489,6 +532,20 @@ export const getEventById: RequestHandler = async (
     }
 
     const event = eventResult.rows[0];
+
+    // 좋아요 상태 확인 (인증된 사용자만)
+    if (userId) {
+      const likeResult = await pool.query(
+        `SELECT id FROM event_likes WHERE event_id = $1 AND user_id = $2`,
+        [eventId, userId]
+      );
+
+      // 좋아요 상태 명시적으로 설정
+      event.is_liked = likeResult.rows.length > 0;
+    } else {
+      // 미인증 사용자는 기본적으로 좋아요 상태가 아님
+      event.is_liked = false;
+    }
 
     // 참가자 수 조회
     const attendeesCountResult = await pool.query(

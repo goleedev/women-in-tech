@@ -90,15 +90,23 @@ export const attendEvent = async (
 ): Promise<{
   success: boolean;
   message: string;
-  status: string;
+  status?: string;
 }> => {
-  return await fetchAPI<{
-    success: boolean;
-    message: string;
-    status: string;
-  }>(`/events/${eventId}/attend`, {
-    method: 'POST',
-  });
+  try {
+    const response = await fetchAPI<{
+      success: boolean;
+      message: string;
+      status?: string;
+    }>(`/events/${eventId}/attend`, {
+      method: 'POST',
+    });
+
+    console.log('이벤트 참가 응답:', response); // 디버깅용 로그
+    return response;
+  } catch (error) {
+    console.error('이벤트 참가 신청 에러:', error);
+    throw error; // 에러를 호출 컴포넌트에서 처리하도록 다시 throw
+  }
 };
 
 export const cancelEventAttendance = async (
@@ -142,5 +150,7 @@ export const getLikedEvents = async (params?: {
   const queryString = queryParams.toString()
     ? `?${queryParams.toString()}`
     : '';
+
+  // 여기서 "/events/liked" 엔드포인트를 사용하는지 확인
   return await fetchAPI<EventsResponse>(`/events/liked${queryString}`);
 };

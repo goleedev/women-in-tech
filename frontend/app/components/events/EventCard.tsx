@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Event } from '@/app/lib/api/types';
 import { likeEvent, unlikeEvent } from '@/app/lib/api/event';
 import { Calendar, MapPin, Heart, Users } from 'lucide-react';
@@ -13,8 +13,14 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onLikeToggle }: EventCardProps) {
+  // 초기 상태를 event.is_liked로 설정하여 이미 좋아요한 이벤트의 경우 하트가 채워지도록 함
   const [isLiked, setIsLiked] = useState(event.is_liked || false);
   const [likeInProgress, setLikeInProgress] = useState(false);
+
+  // 추가: 이벤트 props가 변경될 때 isLiked 상태 업데이트
+  useEffect(() => {
+    setIsLiked(event.is_liked || false);
+  }, [event.is_liked]);
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.preventDefault();

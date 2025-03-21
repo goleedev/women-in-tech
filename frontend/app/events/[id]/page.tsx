@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useAuth } from '@/app/context/AuthContext';
 import {
   getEventById,
-  attendEvent,
   cancelEventAttendance,
   likeEvent,
   unlikeEvent,
@@ -24,7 +23,8 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionInProgress, setActionInProgress] = useState(false);
+  const [attendActionInProgress, setAttendActionInProgress] = useState(false);
+  const [likeActionInProgress, setLikeActionInProgress] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
 
   useEffect(() => {
@@ -32,6 +32,13 @@ export default function EventDetailPage() {
       setLoading(true);
       try {
         const eventData = await getEventById(id as string);
+        console.log('이벤트 상세 데이터:', eventData); // 디버깅용 로그 추가
+
+        // is_liked가 undefined인 경우 false로 기본값 설정
+        if (eventData.is_liked === undefined) {
+          eventData.is_liked = false;
+        }
+
         setEvent(eventData);
 
         // 현재 사용자가 참석자 목록에 있는지 확인
@@ -62,7 +69,7 @@ export default function EventDetailPage() {
       return;
     }
 
-    setActionInProgress(true);
+    setAttendActionInProgress(true); // 참가 버튼만 로딩 상태로 변경
     try {
       if (isAttending) {
         await cancelEventAttendance(id as string);
@@ -78,7 +85,6 @@ export default function EventDetailPage() {
           });
         }
       } else {
-        await attendEvent(id as string);
         setIsAttending(true);
         // 참가자 수 업데이트
         if (event && user) {
@@ -95,7 +101,7 @@ export default function EventDetailPage() {
     } catch (err) {
       console.error('이벤트 참가 처리 오류:', err);
     } finally {
-      setActionInProgress(false);
+      setAttendActionInProgress(false); // 참가 버튼 로딩 상태 해제
     }
   };
 
@@ -106,7 +112,7 @@ export default function EventDetailPage() {
       return;
     }
 
-    setActionInProgress(true);
+    setLikeActionInProgress(true); // 좋아요 버튼만 로딩 상태로 변경
     try {
       if (event.is_liked) {
         await unlikeEvent(id as string);
@@ -121,7 +127,7 @@ export default function EventDetailPage() {
     } catch (err) {
       console.error('좋아요 처리 오류:', err);
     } finally {
-      setActionInProgress(false);
+      setLikeActionInProgress(false); // 좋아요 버튼 로딩 상태 해제
     }
   };
 
@@ -194,12 +200,12 @@ export default function EventDetailPage() {
                 <Button
                   onClick={handleAttendance}
                   disabled={
-                    actionInProgress ||
+                    attendActionInProgress || // 참가 버튼 로딩 상태 확인
                     (event.max_attendees > 0 &&
                       event.current_attendees >= event.max_attendees &&
                       !isAttending)
                   }
-                  isLoading={actionInProgress}
+                  isLoading={attendActionInProgress} // 참가 버튼 로딩 상태 연결
                 >
                   {isAttending ? '참가 취소' : '참가하기'}
                 </Button>
@@ -208,17 +214,20 @@ export default function EventDetailPage() {
               <Button
                 variant="outline"
                 onClick={handleLikeToggle}
-                disabled={actionInProgress}
+                disabled={likeActionInProgress}
+                isLoading={likeActionInProgress}
                 className={
                   event.is_liked
                     ? 'border-red-500 text-red-500 hover:bg-red-50'
                     : ''
                 }
               >
+                {/* 하트 아이콘 색상과 채우기를 더 명확하게 설정 */}
                 <Heart
                   size={16}
-                  className="mr-1"
+                  className={`mr-1 ${event.is_liked ? 'text-red-500' : ''}`}
                   fill={event.is_liked ? 'currentColor' : 'none'}
+                  stroke={event.is_liked ? 'currentColor' : 'currentColor'}
                 />
                 {event.is_liked ? '좋아요 취소' : '좋아요'}
               </Button>

@@ -19,7 +19,14 @@ export default function LikedEventsPage() {
     setLoading(true);
     try {
       const response = await getLikedEvents({ page, limit: 12 });
-      setEvents(response.events);
+
+      // 좋아요 페이지의 모든 이벤트에 is_liked: true 속성 추가
+      const eventsWithLikedStatus = response.events.map((event) => ({
+        ...event,
+        is_liked: true, // 명시적으로 좋아요 상태를 true로 설정
+      }));
+
+      setEvents(eventsWithLikedStatus);
       setTotalPages(response.pagination.total_pages);
       setError(null);
     } catch (err) {
