@@ -10,6 +10,8 @@ export const setupSocketServer = (server: Server) => {
       methods: ['GET', 'POST'],
       credentials: true,
     },
+    pingTimeout: 60000, // 60초 ping 타임아웃
+    pingInterval: 25000, // 25초마다 ping
   });
 
   // 인증 미들웨어
@@ -39,20 +41,34 @@ export const setupSocketServer = (server: Server) => {
       socket.data.user = result.rows[0];
       next();
     } catch (error) {
+      console.error('소켓 인증 오류:', error);
       return next(new Error('인증에 실패했습니다'));
     }
   });
 
   // 연결 이벤트 처리
   io.on('connection', (socket) => {
-    console.log(
-      `User connected: ${socket.data.user.name} (ID: ${socket.data.user.id})`
-    );
+    const user = socket.data.user;
+    console.log(`사용자 연결됨: ${user.name} (ID: ${user.id})`);
 
-    // 채팅방 참가
-    socket.on('join-room', async (roomId) => {
+    // 인증 성공 알림
+    socket.emit('auth_success', { message: 'Socket 인증 성공' });
+
+    // 채팅방 참가 - 재연결 시에도 기존 참가 채팅방 복원을 위해 배열로 관리
+    const joinedRooms = new Set<string>();
+
+    socket.on('join-room', async (data) => {
       try {
-        const user = socket.data.user;
+        const roomId = data.roomId;
+        const roomName = `room:${roomId}`;
+
+        // 이미 참가한 채팅방이면 무시
+        if (joinedRooms.has(roomName)) {
+          console.log(
+            `사용자 ${user.name}(${user.id})는 이미 채팅방 ${roomId}에 참가되어 있음`
+          );
+          return;
+        }
 
         // 채팅방 존재 및 접근 권한 확인
         const roomCheck = await pool.query(
@@ -120,11 +136,16 @@ export const setupSocketServer = (server: Server) => {
         }
 
         // Socket.io 채팅방 참가
-        socket.join(`room:${roomId}`);
+        socket.join(roomName);
+        joinedRooms.add(roomName);
+
+        console.log(
+          `사용자 ${user.name}(${user.id})가 채팅방 ${roomId}에 참가함`
+        );
 
         // 이전 메시지 조회 (최근 20개)
         const messagesResult = await pool.query(
-          `SELECT m.id, m.content, m.created_at,
+          `SELECT m.id, m.content, m.created_at, m.chat_room_id,
                   u.id as sender_id, u.name as sender_name, u.profile_image_url
            FROM messages m
            JOIN users u ON m.sender_id = u.id
@@ -139,6 +160,8 @@ export const setupSocketServer = (server: Server) => {
             id: msg.id,
             content: msg.content,
             created_at: msg.created_at,
+            chat_room_id: msg.chat_room_id,
+            room_id: msg.chat_room_id, // client 일관성을 위해 추가
             sender: {
               id: msg.sender_id,
               name: msg.sender_name,
@@ -150,7 +173,7 @@ export const setupSocketServer = (server: Server) => {
         socket.emit('room-joined', { roomId, messages });
 
         // 참가 알림
-        socket.to(`room:${roomId}`).emit('user-joined', {
+        socket.to(roomName).emit('user-joined', {
           user: {
             id: user.id,
             name: user.name,
@@ -164,9 +187,10 @@ export const setupSocketServer = (server: Server) => {
     });
 
     // 메시지 전송
-    socket.on('send-message', async ({ roomId, content }) => {
+    socket.on('send-message', async (data) => {
       try {
-        const user = socket.data.user;
+        const { roomId, content } = data;
+        const roomName = `room:${roomId}`;
 
         // 채팅방 참가자 확인
         const participantCheck = await pool.query(
@@ -191,18 +215,36 @@ export const setupSocketServer = (server: Server) => {
 
         const message = messageResult.rows[0];
 
-        // 메시지 브로드캐스트
-        io.to(`room:${roomId}`).emit('new-message', {
+        console.log(
+          `사용자 ${user.name}(${
+            user.id
+          })가 채팅방 ${roomId}에 메시지 전송: ${content.substring(0, 30)}${
+            content.length > 30 ? '...' : ''
+          }`
+        );
+
+        // 메시지 브로드캐스트 - room_id 필드 추가 (클라이언트 일관성)
+        const messageToSend = {
           id: message.id,
           content: message.content,
           created_at: message.created_at,
+          chat_room_id: message.chat_room_id,
+          room_id: message.chat_room_id,
           sender: {
             id: user.id,
             name: user.name,
             profile_image_url: user.profile_image_url || null,
           },
-          room_id: roomId,
-        });
+          _messageId: data._messageId, // 클라이언트 추적용
+        };
+
+        const socketsInRoom = await io.in(roomName).fetchSockets();
+        console.log(`채팅방 ${roomId}에 있는 소켓 수: ${socketsInRoom.length}`);
+
+        for (const clientSocket of socketsInRoom) {
+          clientSocket.emit('new-message', messageToSend);
+          console.log(`소켓 ${clientSocket.id}에 메시지 전송 완료`);
+        }
 
         // 다른 참가자들에게 알림 생성
         const otherParticipantsQuery = await pool.query(
@@ -244,16 +286,17 @@ export const setupSocketServer = (server: Server) => {
     });
 
     // 메시지 읽음 처리
-    socket.on('mark-read', async (roomId) => {
+    socket.on('mark-read', async (data) => {
       try {
-        const user = socket.data.user;
+        const roomId = data.roomId;
+        const roomName = `room:${roomId}`;
 
         await pool.query(
           'UPDATE chat_room_participants SET last_read_at = NOW() WHERE chat_room_id = $1 AND user_id = $2',
           [roomId, user.id]
         );
 
-        socket.to(`room:${roomId}`).emit('messages-read', {
+        socket.to(roomName).emit('messages-read', {
           user_id: user.id,
           room_id: roomId,
         });
@@ -263,25 +306,49 @@ export const setupSocketServer = (server: Server) => {
     });
 
     // 타이핑 상태 전송
-    socket.on('typing', (roomId) => {
-      socket.to(`room:${roomId}`).emit('user-typing', {
-        user_id: socket.data.user.id,
-        user_name: socket.data.user.name,
+    socket.on('typing', (data) => {
+      const roomId = data.roomId;
+      const roomName = `room:${roomId}`;
+
+      socket.to(roomName).emit('user-typing', {
+        user_id: user.id,
+        user_name: user.name,
+        room_id: roomId,
       });
     });
 
     // 채팅방 나가기
-    socket.on('leave-room', (roomId) => {
-      socket.leave(`room:${roomId}`);
-      socket.to(`room:${roomId}`).emit('user-left', {
-        user_id: socket.data.user.id,
-        user_name: socket.data.user.name,
+    socket.on('leave-room', (data) => {
+      const roomId = data.roomId;
+      const roomName = `room:${roomId}`;
+
+      socket.leave(roomName);
+      joinedRooms.delete(roomName);
+
+      socket.to(roomName).emit('user-left', {
+        user_id: user.id,
+        user_name: user.name,
+        room_id: roomId,
       });
+
+      console.log(
+        `사용자 ${user.name}(${user.id})가 채팅방 ${roomId}에서 나감`
+      );
     });
 
     // 연결 종료
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${socket.data.user?.name || 'Unknown'}`);
+      console.log(`사용자 연결 종료: ${user.name}(${user.id})`);
+
+      // 모든 참가 채팅방에서 사용자 나가기 알림
+      for (const roomName of joinedRooms) {
+        const roomId = roomName.split(':')[1];
+        socket.to(roomName).emit('user-left', {
+          user_id: user.id,
+          user_name: user.name,
+          room_id: roomId,
+        });
+      }
     });
   });
 
