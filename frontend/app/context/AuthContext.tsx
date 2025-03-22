@@ -144,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (role === user.role || role === user.secondary_role) {
       setActiveRole(role);
       localStorage.setItem('activeRole', role);
+      console.log('역할 전환됨:', role); // 디버깅용 로그 추가
     }
   };
 

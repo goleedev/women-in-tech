@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/context/AuthContext';
 import { getUsers, connectRequest } from '@/app/lib/api/mentorship';
@@ -14,6 +14,7 @@ interface MentorshipUser extends User {
   tags: string[];
   similarity_score?: number;
   is_connected?: boolean;
+  connection_status?: 'pending' | 'accepted' | 'rejected';
 }
 
 export default function MentorshipPage() {
@@ -22,17 +23,17 @@ export default function MentorshipPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // activeRole에 따라 필터 기본값 설정
-  const defaultRoleFilter = activeRole === 'mentor' ? 'mentee' : 'mentor';
+  // 활성 역할에 따라 찾을 역할 설정 (멘토는 멘티를, 멘티는 멘토를 찾음)
+  const targetRole = activeRole === 'mentor' ? 'mentee' : 'mentor';
 
   const [filters, setFilters] = useState<{
-    role: 'mentor' | 'mentee' | undefined;
+    role: 'mentor' | 'mentee';
     expertise: string;
     seniority_level: string;
     country: string;
     search: string;
   }>({
-    role: defaultRoleFilter as 'mentor' | 'mentee',
+    role: targetRole,
     expertise: '',
     seniority_level: '',
     country: '',
@@ -48,28 +49,45 @@ export default function MentorshipPage() {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<MentorshipUser | null>(null);
 
-  // 활성 역할이 변경될 때마다 필터 업데이트
+  // 활성 역할이 변경될 때마다 찾을 역할 필터 업데이트
   useEffect(() => {
+    console.log('활성 역할 변경:', activeRole);
+
+    // 멘토는 멘티를 찾고, 멘티는 멘토를 찾도록 설정
+    const newTargetRole = activeRole === 'mentor' ? 'mentee' : 'mentor';
+
     setFilters((prev) => ({
       ...prev,
-      role: activeRole === 'mentor' ? 'mentee' : 'mentor',
+      role: newTargetRole,
     }));
+
+    // 필터 변경 시 페이지 리셋 및 즉시 검색
+    setPage(1);
   }, [activeRole]);
 
-  const fetchUsers = async (page = 1) => {
+  // 사용자 목록 조회 함수
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('fetchUsers 호출:', { ...filters, page, limit: 9 }); // 디버깅용 로그 추가
-
-      // mode 파라미터 제거 (백엔드에서 아직 처리하지 않음)
-      const response = await getUsers({
+      console.log('사용자 목록 조회:', {
         ...filters,
-        mode: activeRole, // 백엔드가 아직 이 파라미터를 처리하지 않으므로 주석 처리
         page,
         limit: 9,
+        mode: activeRole, // 현재 활성 역할 전달
       });
 
-      setUsers(response.users);
+      const response = await getUsers({
+        ...filters,
+        page,
+        limit: 9,
+        mode: activeRole, // 현재 활성 역할을 백엔드에 전달
+      });
+
+      // 자신 제외 (백엔드에서도 처리하지만 이중 확인)
+      const filteredUsers = response.users.filter((u) => u.id !== user?.id);
+
+      console.log('조회된 사용자 수:', filteredUsers.length);
+      setUsers(filteredUsers);
       setTotalPages(response.pagination.total_pages);
       setError(null);
     } catch (err) {
@@ -78,11 +96,12 @@ export default function MentorshipPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, page, activeRole, user?.id]);
 
+  // 필터나 페이지가 변경될 때 사용자 목록 다시 조회
   useEffect(() => {
-    fetchUsers(page);
-  }, [page, activeRole, filters.role]);
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleFilterChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -96,12 +115,17 @@ export default function MentorshipPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1);
-    fetchUsers(1);
+    setPage(1); // 검색 시 첫 페이지로 이동
+    fetchUsers(); // 직접 호출하여 즉시 검색 결과 반영
   };
 
-  const handleConnect = (selectedUser: MentorshipUser) => {
-    setSelectedUser(selectedUser);
+  const handleConnect = (userItem: MentorshipUser) => {
+    if (!isAuthenticated) {
+      window.location.href = `/login?redirect=/mentorship`;
+      return;
+    }
+
+    setSelectedUser(userItem);
     setConnectMessage('');
     setShowConnectModal(true);
   };
@@ -111,12 +135,19 @@ export default function MentorshipPage() {
 
     setConnectInProgress(selectedUser.id);
     try {
-      await connectRequest(selectedUser.id, connectMessage);
+      const response = await connectRequest(selectedUser.id, connectMessage);
+      console.log('연결 요청 응답:', response);
 
-      // 연결 상태 업데이트
+      // 연결 상태 업데이트 - pending 상태로 설정
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === selectedUser.id ? { ...u, is_connected: true } : u
+          u.id === selectedUser.id
+            ? {
+                ...u,
+                is_connected: false, // 아직 수락되지 않았으므로 false
+                connection_status: 'pending', // 요청 중 상태로 설정
+              }
+            : u
         )
       );
 
@@ -125,6 +156,31 @@ export default function MentorshipPage() {
       console.error('멘토십 연결 요청 오류:', err);
     } finally {
       setConnectInProgress(null);
+    }
+  };
+
+  // 연결 상태에 따른 UI 표시 함수
+  const renderConnectionStatus = (userItem: MentorshipUser) => {
+    if (userItem.is_connected) {
+      return <span className="text-green-600 text-sm">연결됨</span>;
+    }
+
+    switch (userItem.connection_status) {
+      case 'pending':
+        return <span className="text-yellow-600 text-sm">요청 중</span>;
+      case 'rejected':
+        return <span className="text-red-600 text-sm">거절됨</span>;
+      default:
+        return (
+          <Button
+            variant="outline"
+            onClick={() => handleConnect(userItem)}
+            disabled={connectInProgress === userItem.id}
+            isLoading={connectInProgress === userItem.id}
+          >
+            연결 요청
+          </Button>
+        );
     }
   };
 
@@ -137,7 +193,9 @@ export default function MentorshipPage() {
           </h1>
 
           {/* 역할 전환 컴포넌트 */}
-          {user && (user.secondary_role || user.role) && <RoleSwitcher />}
+          {user && (user.secondary_role || user.role !== activeRole) && (
+            <RoleSwitcher />
+          )}
         </div>
 
         <Link href="/mentorship/connections">
@@ -231,7 +289,7 @@ export default function MentorshipPage() {
           <Button
             onClick={() =>
               setFilters({
-                role: defaultRoleFilter,
+                role: activeRole === 'mentor' ? 'mentee' : 'mentor',
                 expertise: '',
                 seniority_level: '',
                 country: '',
@@ -285,6 +343,13 @@ export default function MentorshipPage() {
                   </div>
 
                   <p className="text-gray-600 mb-4">{userItem.expertise}</p>
+                  <p className="text-sm text-gray-500 mb-2">
+                    {userItem.role === 'mentor' ? '멘토' : '멘티'}
+                    {userItem.secondary_role &&
+                      ` / ${
+                        userItem.secondary_role === 'mentor' ? '멘토' : '멘티'
+                      }`}
+                  </p>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-start">
@@ -325,23 +390,7 @@ export default function MentorshipPage() {
                       </span>
                     </Link>
 
-                    {isAuthenticated &&
-                      user &&
-                      userItem.id !== user.id &&
-                      !userItem.is_connected && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleConnect(userItem)}
-                          disabled={connectInProgress === userItem.id}
-                          isLoading={connectInProgress === userItem.id}
-                        >
-                          연결 요청
-                        </Button>
-                      )}
-
-                    {userItem.is_connected && (
-                      <span className="text-green-600 text-sm">연결됨</span>
-                    )}
+                    {isAuthenticated && renderConnectionStatus(userItem)}
                   </div>
                 </div>
               </CardContent>

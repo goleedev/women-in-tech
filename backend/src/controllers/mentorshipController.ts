@@ -39,9 +39,24 @@ export const getUsers = async (
 
     // 역할 필터
     if (role) {
-      queryConditions.push(`role = $${queryIndex}`);
+      // 역할 필터를 개선: 주 역할 또는 보조 역할 포함
+      queryConditions.push(
+        `(role = $${queryIndex} OR secondary_role = $${queryIndex})`
+      );
       queryParams.push(role);
       queryIndex++;
+    }
+
+    // 활성 역할 모드 고려 (선택 사항)
+    if (mode) {
+      // 사용자의 현재 활성 역할을 기준으로 필터링
+      if (mode === 'mentor') {
+        // 멘토는 멘티를 찾음
+        queryConditions.push(`(role = 'mentee' OR secondary_role = 'mentee')`);
+      } else if (mode === 'mentee') {
+        // 멘티는 멘토를 찾음
+        queryConditions.push(`(role = 'mentor' OR secondary_role = 'mentor')`);
+      }
     }
 
     // 전문 분야 필터
@@ -74,7 +89,7 @@ export const getUsers = async (
       queryIndex++;
     }
 
-    // 본인은 제외
+    // 본인은 제외 (중요)
     if (currentUserId) {
       queryConditions.push(`id != $${queryIndex}`);
       queryParams.push(currentUserId);
@@ -163,6 +178,11 @@ export const getUsers = async (
           users[i].is_connected =
             connectionResult.rows.length > 0 &&
             connectionResult.rows[0].status === 'accepted';
+
+          // 연결 상태 추가 (pending, accepted, rejected)
+          if (connectionResult.rows.length > 0) {
+            users[i].connection_status = connectionResult.rows[0].status;
+          }
         }
 
         // 유사도 기준 정렬
@@ -230,15 +250,16 @@ export const connectRequest = async (
       return;
     }
 
-    // 요청 대상이 멘토인지 확인
+    // 요청 대상이 멘토인지 확인 (역할 또는 보조 역할)
     const mentorCheck = await pool.query(
-      'SELECT role FROM users WHERE id = $1',
+      'SELECT role, secondary_role FROM users WHERE id = $1',
       [mentor_id]
     );
 
     if (
       mentorCheck.rows.length === 0 ||
-      mentorCheck.rows[0].role !== 'mentor'
+      (mentorCheck.rows[0].role !== 'mentor' &&
+        mentorCheck.rows[0].secondary_role !== 'mentor')
     ) {
       res.status(400).json({
         success: false,
@@ -611,11 +632,16 @@ export const getRecommendedMentors = async (
     }
 
     // 사용자가 멘티인지 확인
-    const userCheck = await pool.query('SELECT role FROM users WHERE id = $1', [
-      userId,
-    ]);
+    const userCheck = await pool.query(
+      'SELECT role, secondary_role FROM users WHERE id = $1',
+      [userId]
+    );
 
-    if (userCheck.rows.length === 0 || userCheck.rows[0].role !== 'mentee') {
+    if (
+      userCheck.rows.length === 0 ||
+      (userCheck.rows[0].role !== 'mentee' &&
+        userCheck.rows[0].secondary_role !== 'mentee')
+    ) {
       res.status(400).json({
         success: false,
         message: '멘티만 추천 멘토를 조회할 수 있습니다',

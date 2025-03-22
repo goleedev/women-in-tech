@@ -18,6 +18,7 @@ export interface MentorshipUserWithMetadata extends User {
   tags: string[];
   similarity_score?: number;
   is_connected?: boolean;
+  connection_status?: 'pending' | 'accepted' | 'rejected';
 }
 
 export interface UsersResponse {

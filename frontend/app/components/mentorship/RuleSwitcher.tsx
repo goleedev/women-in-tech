@@ -16,11 +16,15 @@ export default function RoleSwitcher() {
 
     if (newRole) {
       switchRole(newRole);
+      console.log('역할 전환:', newRole); // 디버깅용 로그
     }
   };
 
-  // 보조 역할이 없으면 전환 버튼 표시하지 않음
-  if (!user?.secondary_role) return null;
+  // 보조 역할이 없고, 활성 역할이 주 역할인 경우 전환 버튼 표시하지 않음
+  if (!user?.secondary_role && activeRole === user?.role) {
+    console.log('역할 전환 버튼 숨김: 보조 역할 없음');
+    return null;
+  }
 
   return (
     <div className="flex items-center">

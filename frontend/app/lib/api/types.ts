@@ -1,9 +1,31 @@
-// app/lib/api/types.ts
+// app/lib/api/types.ts// MentorshipConnection 타입 정의에 connection_status 추가
+export interface MentorshipConnection {
+  id: number;
+  mentor: {
+    id: number;
+    name: string;
+    expertise: string;
+    profession: string;
+  };
+  mentee: {
+    id: number;
+    name: string;
+    expertise: string;
+    profession: string;
+  };
+  status: 'pending' | 'accepted' | 'rejected';
+  message?: string;
+  created_at: string;
+  chat_room_id?: number;
+}
+
+// User 타입 정의에 secondary_role 추가
 export interface User {
   id: number;
   email: string;
   name: string;
   role: string;
+  secondary_role?: string;
   expertise?: string;
   profession?: string;
   seniority_level?: string;
@@ -12,7 +34,6 @@ export interface User {
   profile_image_url?: string;
   is_verified?: boolean;
   tags?: string[];
-  secondary_role?: string;
 }
 
 export interface Event {
