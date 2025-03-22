@@ -25,6 +25,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     seniority_level,
     country,
     role,
+    secondary_role,
     bio,
   } = req.body;
 
@@ -49,9 +50,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // 사용자 생성
     const newUser = await pool.query(
       `INSERT INTO users 
-      (email, name, password_hash, expertise, profession, seniority_level, country, role, bio) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-      RETURNING id, email, name, role`,
+      (email, name, password_hash, expertise, profession, seniority_level, country, role, secondary_role, bio) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+      RETURNING id, email, name, role, secondary_role`,
       [
         email,
         name,
@@ -61,9 +62,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         seniority_level,
         country,
         role,
+        secondary_role || null, // secondary_role이 없으면 null
         bio,
       ]
     );
+
+    res.status(201).json({
+      success: true,
+      message: '회원가입이 완료되었습니다',
+      user: newUser.rows[0],
+    });
 
     res.status(201).json({
       success: true,

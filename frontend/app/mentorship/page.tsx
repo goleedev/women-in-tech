@@ -8,6 +8,7 @@ import { User } from '@/app/lib/api/types';
 import { Card, CardContent } from '@/app/ui/Card';
 import Button from '@/app/ui/Button';
 import Image from 'next/image';
+import RoleSwitcher from '../components/mentorship/RuleSwitcher';
 
 interface MentorshipUser extends User {
   tags: string[];
@@ -16,17 +17,28 @@ interface MentorshipUser extends User {
 }
 
 export default function MentorshipPage() {
-  const { isAuthenticated, user } = useAuth();
+  const { user, isAuthenticated, activeRole } = useAuth();
   const [users, setUsers] = useState<MentorshipUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState({
-    role: '',
+
+  // activeRole에 따라 필터 기본값 설정
+  const defaultRoleFilter = activeRole === 'mentor' ? 'mentee' : 'mentor';
+
+  const [filters, setFilters] = useState<{
+    role: 'mentor' | 'mentee' | undefined;
+    expertise: string;
+    seniority_level: string;
+    country: string;
+    search: string;
+  }>({
+    role: defaultRoleFilter as 'mentor' | 'mentee',
     expertise: '',
     seniority_level: '',
     country: '',
     search: '',
   });
+
   const [connectInProgress, setConnectInProgress] = useState<number | null>(
     null
   );
@@ -36,15 +48,23 @@ export default function MentorshipPage() {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<MentorshipUser | null>(null);
 
+  // 활성 역할이 변경될 때마다 필터 업데이트
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      role: activeRole === 'mentor' ? 'mentee' : 'mentor',
+    }));
+  }, [activeRole]);
+
   const fetchUsers = async (page = 1) => {
     setLoading(true);
     try {
-      // 현재 사용자가 멘토면 멘티만, 멘티면 멘토만 보여주기
-      const defaultRole = user?.role === 'mentor' ? 'mentee' : 'mentor';
+      console.log('fetchUsers 호출:', { ...filters, page, limit: 9 }); // 디버깅용 로그 추가
 
+      // mode 파라미터 제거 (백엔드에서 아직 처리하지 않음)
       const response = await getUsers({
         ...filters,
-        role: (filters.role as 'mentee' | 'mentor') || defaultRole,
+        mode: activeRole, // 백엔드가 아직 이 파라미터를 처리하지 않으므로 주석 처리
         page,
         limit: 9,
       });
@@ -62,7 +82,7 @@ export default function MentorshipPage() {
 
   useEffect(() => {
     fetchUsers(page);
-  }, [page, user?.role]);
+  }, [page, activeRole, filters.role]);
 
   const handleFilterChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -111,9 +131,14 @@ export default function MentorshipPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-        <h1 className="text-3xl font-bold mb-4 md:mb-0">
-          {user?.role === 'mentor' ? '멘티 찾기' : '멘토 찾기'}
-        </h1>
+        <div className="flex items-center space-x-4 mb-4 md:mb-0">
+          <h1 className="text-3xl font-bold">
+            {activeRole === 'mentor' ? '멘티 찾기' : '멘토 찾기'}
+          </h1>
+
+          {/* 역할 전환 컴포넌트 */}
+          {user && (user.secondary_role || user.role) && <RoleSwitcher />}
+        </div>
 
         <Link href="/mentorship/connections">
           <Button variant="outline">내 멘토십 연결</Button>
@@ -206,7 +231,7 @@ export default function MentorshipPage() {
           <Button
             onClick={() =>
               setFilters({
-                role: '',
+                role: defaultRoleFilter,
                 expertise: '',
                 seniority_level: '',
                 country: '',
@@ -219,18 +244,18 @@ export default function MentorshipPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {users.map((user) => (
-            <Card key={user.id} className="overflow-hidden">
+          {users.map((userItem) => (
+            <Card key={userItem.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="relative">
                   <div className="h-20 bg-blue-600"></div>
                   <div className="flex justify-center">
                     <div className="w-20 h-20 rounded-full bg-white p-1 absolute -bottom-10">
                       <div className="w-full h-full rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
-                        {user.profile_image_url ? (
+                        {userItem.profile_image_url ? (
                           <Image
-                            src={user.profile_image_url}
-                            alt={user.name}
+                            src={userItem.profile_image_url}
+                            alt={userItem.name}
                             unoptimized
                             width={80}
                             height={80}
@@ -238,7 +263,7 @@ export default function MentorshipPage() {
                           />
                         ) : (
                           <span className="text-xl font-bold text-blue-600">
-                            {user.name.charAt(0)}
+                            {userItem.name.charAt(0)}
                           </span>
                         )}
                       </div>
@@ -248,41 +273,41 @@ export default function MentorshipPage() {
 
                 <div className="pt-12 p-6">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl font-semibold">{user.name}</h3>
-                    {user.similarity_score !== undefined &&
-                      user.similarity_score > 0 && (
+                    <h3 className="text-xl font-semibold">{userItem.name}</h3>
+                    {userItem.similarity_score !== undefined &&
+                      userItem.similarity_score > 0 && (
                         <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                          {user.similarity_score >= 5
+                          {userItem.similarity_score >= 5
                             ? '높은 일치도'
                             : '일치도 있음'}
                         </span>
                       )}
                   </div>
 
-                  <p className="text-gray-600 mb-4">{user.expertise}</p>
+                  <p className="text-gray-600 mb-4">{userItem.expertise}</p>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-start">
                       <span className="text-gray-500 w-24 text-sm">직업:</span>
-                      <span>{user.profession || '-'}</span>
+                      <span>{userItem.profession || '-'}</span>
                     </div>
 
                     <div className="flex items-start">
                       <span className="text-gray-500 w-24 text-sm">
                         경력 수준:
                       </span>
-                      <span>{user.seniority_level || '-'}</span>
+                      <span>{userItem.seniority_level || '-'}</span>
                     </div>
 
                     <div className="flex items-start">
                       <span className="text-gray-500 w-24 text-sm">국가:</span>
-                      <span>{user.country || '-'}</span>
+                      <span>{userItem.country || '-'}</span>
                     </div>
                   </div>
 
-                  {user.tags && user.tags.length > 0 && (
+                  {userItem.tags && userItem.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-4">
-                      {user.tags.map((tag, index) => (
+                      {userItem.tags.map((tag, index) => (
                         <span
                           key={index}
                           className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
@@ -294,24 +319,27 @@ export default function MentorshipPage() {
                   )}
 
                   <div className="flex justify-between items-center">
-                    <Link href={`/mentorship/users/${user.id}`}>
+                    <Link href={`/mentorship/users/${userItem.id}`}>
                       <span className="text-blue-600 hover:underline text-sm">
                         프로필 보기
                       </span>
                     </Link>
 
-                    {isAuthenticated && !user.is_connected && (
-                      <Button
-                        variant="outline"
-                        onClick={() => handleConnect(user)}
-                        disabled={connectInProgress === user.id}
-                        isLoading={connectInProgress === user.id}
-                      >
-                        연결 요청
-                      </Button>
-                    )}
+                    {isAuthenticated &&
+                      user &&
+                      userItem.id !== user.id &&
+                      !userItem.is_connected && (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleConnect(userItem)}
+                          disabled={connectInProgress === userItem.id}
+                          isLoading={connectInProgress === userItem.id}
+                        >
+                          연결 요청
+                        </Button>
+                      )}
 
-                    {user.is_connected && (
+                    {userItem.is_connected && (
                       <span className="text-green-600 text-sm">연결됨</span>
                     )}
                   </div>

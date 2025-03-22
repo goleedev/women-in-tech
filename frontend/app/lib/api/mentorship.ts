@@ -1,4 +1,3 @@
-// app/lib/api/mentorship.ts
 'use client';
 
 import { fetchAPI } from './client';
@@ -12,6 +11,7 @@ export interface MentorshipParams {
   search?: string;
   page?: number;
   limit?: number;
+  mode?: string; // 활성 역할 모드 추가
 }
 
 export interface MentorshipUserWithMetadata extends User {
@@ -46,7 +46,14 @@ export const getUsers = async (
   const queryString = queryParams.toString()
     ? `?${queryParams.toString()}`
     : '';
-  return await fetchAPI<UsersResponse>(`/mentorship/users${queryString}`);
+
+  try {
+    console.log('API 요청 URL:', `/mentorship/users${queryString}`); // 디버깅용 로그 추가
+    return await fetchAPI<UsersResponse>(`/mentorship/users${queryString}`);
+  } catch (error) {
+    console.error('멘토십 사용자 조회 API 오류:', error);
+    throw error; // 에러 다시 던지기
+  }
 };
 
 export const connectRequest = async (

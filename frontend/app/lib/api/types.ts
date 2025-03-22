@@ -12,6 +12,7 @@ export interface User {
   profile_image_url?: string;
   is_verified?: boolean;
   tags?: string[];
+  secondary_role?: string;
 }
 
 export interface Event {

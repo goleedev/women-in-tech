@@ -1,3 +1,4 @@
+// backend/src/controllers/mentorshipController.ts
 import { Request, Response } from 'express';
 import pool from '../config/database';
 import { findMentorForMentee } from '../services/mentorshipService';
@@ -20,6 +21,7 @@ export const getUsers = async (
   try {
     const {
       role,
+      mode, // 활동 모드 파라미터 추가
       expertise,
       seniority_level,
       country,
@@ -27,6 +29,7 @@ export const getUsers = async (
       page = 1,
       limit = 10,
     } = req.query;
+
     const offset = (Number(page) - 1) * Number(limit);
     const currentUserId = req.user?.id;
 
@@ -94,7 +97,7 @@ export const getUsers = async (
 
     // 사용자 목록 조회
     const usersQuery = `
-      SELECT id, name, expertise, profession, seniority_level, country, role, bio, profile_image_url
+      SELECT id, name, expertise, profession, seniority_level, country, role, secondary_role, bio, profile_image_url
       FROM users
       ${whereClause}
       ORDER BY name ASC

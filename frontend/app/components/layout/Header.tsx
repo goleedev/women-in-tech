@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { Bell, Menu, X } from 'lucide-react';
+import RoleSwitcher from '../mentorship/RuleSwitcher';
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -51,6 +52,8 @@ export default function Header() {
                     </span>
                   )}
                 </Link>
+
+                {user && (user.secondary_role || user.role) && <RoleSwitcher />}
               </>
             )}
           </nav>
@@ -128,6 +131,7 @@ export default function Header() {
                 >
                   알림 {unreadCount > 0 && `(${unreadCount})`}
                 </Link>
+
                 <Link
                   href="/profile"
                   className="block py-2 hover:text-blue-200"
@@ -135,6 +139,9 @@ export default function Header() {
                 >
                   프로필
                 </Link>
+
+                {user && (user.secondary_role || user.role) && <RoleSwitcher />}
+
                 <button
                   onClick={() => {
                     logout();

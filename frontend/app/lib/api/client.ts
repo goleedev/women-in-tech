@@ -23,17 +23,50 @@ export async function fetchAPI<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    console.log(`API 요청: ${API_BASE_URL}${endpoint}`, {
+      method: options.method || 'GET',
+      headers,
+      // 디버깅용으로 body도 표시 (민감한 정보가 아닌 경우)
+      body: options.body ? '(request body)' : undefined,
+    });
 
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ message: 'API 요청 실패' }));
-    throw new Error(error.message || 'API 요청 실패');
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text(); // 응답 텍스트 가져오기
+      let errorData;
+
+      try {
+        // JSON 파싱 시도
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        console.error('API 에러 응답 JSON 파싱 실패:', e);
+        // JSON 파싱 실패 시 텍스트 그대로 사용
+        errorData = {
+          message:
+            errorText ||
+            `API 요청 실패: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      console.error('API 에러 응답:', errorData);
+      throw new Error(errorData.message || 'API 요청 실패');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    // 에러가 Error 객체가 아닐 경우 처리
+    if (!(error instanceof Error)) {
+      console.error('API 요청 중 알 수 없는 에러:', error);
+      throw new Error('API 요청 중 알 수 없는 에러가 발생했습니다');
+    }
+
+    // 기존 에러 다시 던지기
+    throw error;
   }
-
-  return await response.json();
 }

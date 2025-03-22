@@ -19,10 +19,12 @@ import { User } from '../lib/api/types';
 
 interface AuthContextType {
   user: User | null;
+  activeRole: string;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  switchRole: (role: string) => void;
   refreshUser: () => Promise<void>;
   error: string | null;
 }
@@ -31,6 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [activeRole, setActiveRole] = useState<string>('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,20 +50,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (storedUser) {
             setUser(storedUser);
+
+            // 활성 역할 설정
+            const savedRole =
+              localStorage.getItem('activeRole') || storedUser.role;
+            // 저장된 역할이 사용자의 주 역할이나 보조 역할인지 확인
+            const validRole =
+              savedRole === storedUser.role ||
+              savedRole === storedUser.secondary_role;
+            setActiveRole(validRole ? savedRole : storedUser.role);
+
             setIsAuthenticated(true);
           } else {
             // 토큰은 있지만 사용자 정보가 없는 경우 API로 가져오기
             const userData = await getMe();
             setUser(userData);
+
+            // 활성 역할 설정
+            const savedRole =
+              localStorage.getItem('activeRole') || userData.role;
+            const validRole =
+              savedRole === userData.role ||
+              savedRole === userData.secondary_role;
+            setActiveRole(validRole ? savedRole : userData.role);
+
             setIsAuthenticated(true);
           }
         } else {
           setUser(null);
+          setActiveRole('');
           setIsAuthenticated(false);
         }
       } catch (err) {
         console.error('인증 확인 오류:', err);
         setUser(null);
+        setActiveRole('');
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -78,6 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiLogin({ email, password });
       setUser(response.user);
+
+      // 활성 역할 설정 (기본적으로 주 역할)
+      setActiveRole(response.user.role);
+      localStorage.setItem('activeRole', response.user.role);
+
       setIsAuthenticated(true);
       router.push('/');
     } catch (err) {
@@ -96,12 +125,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiLogout();
       setUser(null);
+      setActiveRole('');
       setIsAuthenticated(false);
+      localStorage.removeItem('activeRole');
       router.push('/');
     } catch (err) {
       console.error('로그아웃 오류:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 역할 전환 함수
+  const switchRole = (role: string) => {
+    if (!user) return;
+
+    // 사용자가 해당 역할을 가지고 있는지 확인
+    if (role === user.role || role === user.secondary_role) {
+      setActiveRole(role);
+      localStorage.setItem('activeRole', role);
     }
   };
 
@@ -112,6 +154,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userData = await getMe();
       setUser(userData);
+
+      // 활성 역할이 여전히 유효한지 확인
+      const currentRole = activeRole || userData.role;
+      const validRole =
+        currentRole === userData.role ||
+        currentRole === userData.secondary_role;
+
+      if (!validRole) {
+        // 활성 역할이 더 이상 유효하지 않으면 기본 역할로 재설정
+        setActiveRole(userData.role);
+        localStorage.setItem('activeRole', userData.role);
+      }
     } catch (err) {
       console.error('사용자 정보 새로고침 오류:', err);
     }
@@ -121,10 +175,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        activeRole,
         isAuthenticated,
         isLoading,
         login,
         logout,
+        switchRole,
         refreshUser,
         error,
       }}

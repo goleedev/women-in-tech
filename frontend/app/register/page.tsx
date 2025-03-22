@@ -24,6 +24,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     role: '' as UserRole,
+    secondary_role: '' as UserRole | '',
     expertise: '',
     profession: '',
     seniority_level: '',
@@ -220,7 +221,7 @@ export default function RegisterPage() {
 
                 <div className="space-y-1 w-full">
                   <label className="block text-sm font-medium text-gray-700">
-                    역할
+                    주 역할
                   </label>
                   <div className="flex space-x-4 mt-1">
                     <label className="flex items-center space-x-2">
@@ -251,6 +252,40 @@ export default function RegisterPage() {
                       {errors.role}
                     </p>
                   )}
+                </div>
+
+                {/* 보조 역할 선택 부분 추가 */}
+                <div className="space-y-1 w-full">
+                  <label className="block text-sm font-medium text-gray-700">
+                    보조 역할 (선택 사항)
+                  </label>
+                  <div className="flex space-x-4 mt-1">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        name="secondary_role"
+                        value=""
+                        checked={formData.secondary_role === ''}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-blue-600"
+                      />
+                      <span>없음</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        name="secondary_role"
+                        value={formData.role === 'mentee' ? 'mentor' : 'mentee'}
+                        checked={formData.secondary_role !== ''}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-blue-600"
+                        disabled={!formData.role} // 주 역할 선택 전에는 비활성화
+                      />
+                      <span>
+                        {formData.role === 'mentee' ? '멘토' : '멘티'}
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </>
             ) : (
