@@ -12,6 +12,7 @@ export class SocketService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private pendingMessages: Array<{ eventType: string; data: any }> = [];
   private messageCounter = 0;
+  private connectionPromise: Promise<boolean> | null = null;
 
   constructor() {
     this.setupSocketEvents = this.setupSocketEvents.bind(this);
@@ -35,63 +36,91 @@ export class SocketService {
   }
 
   // 웹소켓 연결
-  connect() {
-    if (typeof window === 'undefined') return;
+  connect(): Promise<boolean> {
+    if (typeof window === 'undefined') return Promise.resolve(false);
 
-    // 이미 연결 중이거나 연결된 상태면 건너뜀
+    // 이미 연결 중이거나 연결된 상태면 해당 상태 반환
     if (
       this.socket &&
       (this.socket.readyState === WebSocket.OPEN ||
         this.socket.readyState === WebSocket.CONNECTING)
     ) {
-      return;
+      return this.connectionPromise || Promise.resolve(this.isConnected());
+    }
+
+    // 이미 연결 시도 중이면 해당 Promise 반환
+    if (this.connectionPromise) {
+      return this.connectionPromise;
     }
 
     const token = localStorage.getItem('token');
     if (!token) {
       console.warn('인증 토큰이 없어 WebSocket 연결을 시도하지 않습니다.');
-      return;
+      return Promise.resolve(false);
     }
 
-    try {
-      // WebSocket 연결 URL
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const hostname = window.location.hostname;
-      const port = '5001'; // 포트는 백엔드 서버 포트에 맞게 설정
-      const wsUrl = `${wsProtocol}//${hostname}:${port}`;
+    this.connectionPromise = new Promise((resolve) => {
+      try {
+        // WebSocket 연결 URL
+        const wsProtocol =
+          window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const hostname = window.location.hostname;
+        const port = '5001'; // 포트는 백엔드 서버 포트에 맞게 설정
+        const wsUrl = `${wsProtocol}//${hostname}:${port}`;
 
-      console.log(`WebSocket 연결 시도: ${wsUrl}`);
-      this.socket = new WebSocket(wsUrl);
-      this.authenticating = true;
-      this.setupSocketEvents();
-    } catch (error) {
-      console.error('WebSocket 연결 생성 중 오류:', error);
-      this.authenticating = false;
-      this.scheduleReconnect();
-    }
+        console.log(`WebSocket 연결 시도: ${wsUrl}`);
+        this.socket = new WebSocket(wsUrl);
+        this.authenticating = true;
+
+        // 연결 성공 이벤트
+        this.socket.onopen = () => {
+          console.log('WebSocket 연결됨');
+          this.reconnectAttempts = 0;
+
+          // 연결 후 인증 토큰 전송
+          const token = localStorage.getItem('token');
+          if (
+            token &&
+            this.socket &&
+            this.socket.readyState === WebSocket.OPEN
+          ) {
+            console.log('인증 토큰 전송');
+            this.socket.send(JSON.stringify({ type: 'auth', token }));
+
+            // 약간의 지연 후에 메시지 전송 (인증 처리 시간을 위해)
+            setTimeout(() => {
+              this.authenticating = false;
+              this.sendPendingMessages();
+              resolve(true);
+              this.connectionPromise = null;
+            }, 500);
+          }
+        };
+
+        // 에러 발생 이벤트
+        this.socket.onerror = () => {
+          resolve(false);
+          this.connectionPromise = null;
+        };
+
+        this.setupSocketEvents();
+      } catch (error) {
+        console.error('WebSocket 연결 생성 중 오류:', error);
+        this.authenticating = false;
+        this.scheduleReconnect();
+        resolve(false);
+        this.connectionPromise = null;
+      }
+    });
+
+    return this.connectionPromise;
   }
 
   // 웹소켓 이벤트 설정
   private setupSocketEvents() {
     if (!this.socket) return;
 
-    this.socket.onopen = () => {
-      console.log('WebSocket 연결됨');
-      this.reconnectAttempts = 0;
-
-      // 연결 후 인증 토큰 전송
-      const token = localStorage.getItem('token');
-      if (token && this.socket && this.socket.readyState === WebSocket.OPEN) {
-        console.log('인증 토큰 전송');
-        this.socket.send(JSON.stringify({ type: 'auth', token }));
-
-        // 약간의 지연 후에 메시지 전송 (인증 처리 시간을 위해)
-        setTimeout(() => {
-          this.authenticating = false;
-          this.sendPendingMessages();
-        }, 500);
-      }
-    };
+    // onopen은 connect 함수에서 처리
 
     // frontend/app/lib/api/socket.ts 일부 수정 - onmessage 함수 개선
     this.socket.onmessage = (event) => {
@@ -111,12 +140,18 @@ export class SocketService {
           console.log('WebSocket 인증 성공');
           this.authenticating = false;
           this.sendPendingMessages();
+
+          // auth_success 이벤트 리스너가 있다면 호출
+          const authListeners = this.listeners.get('auth_success');
+          if (authListeners && authListeners.size > 0) {
+            authListeners.forEach((listener) => listener(data));
+          }
           return;
         }
 
         // 직접 메시지 이벤트인 경우 (백엔드가 메시지 객체를 직접 보내는 경우)
         if (type === 'new-message') {
-          console.log(`'new-message' 이벤트 수신:`, payload);
+          console.log(`'new-message' 이벤트 수신:`, payload || data);
           const eventListeners = this.listeners.get('new-message');
           if (eventListeners && eventListeners.size > 0) {
             eventListeners.forEach((listener) => {
@@ -196,7 +231,7 @@ export class SocketService {
     if (this.pendingMessages.length > 0 && this.isConnected()) {
       console.log(`${this.pendingMessages.length}개의 대기 메시지 전송`);
 
-      // 복사본을 만들어 작업
+      // 복사본을 만들어 작업 (race condition 방지)
       const messagesToSend = [...this.pendingMessages];
       this.pendingMessages = [];
 
@@ -223,8 +258,8 @@ export class SocketService {
       this.socket = null;
     }
 
-    // 리스너 초기화 (선택적)
-    // this.listeners.clear();
+    this.connectionPromise = null;
+    // 리스너는 유지하여 재연결 시 사용
   }
 
   // 연결 상태 확인
