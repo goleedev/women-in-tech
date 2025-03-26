@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import pool from '../config/database';
-import { generateToken } from '../utils/helper';
+import pool from '../database';
+import { generateToken } from '../utils/auth.utils';
 
 // Request 타입 확장
 interface AuthRequest extends Request {

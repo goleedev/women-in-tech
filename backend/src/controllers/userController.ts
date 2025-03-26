@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import pool from '../config/database';
+import pool from '../database';
 
 // Request 타입 확장
 interface AuthRequest extends Request {

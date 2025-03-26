@@ -1,4 +1,4 @@
-import pool from '../config/database';
+import pool from '../database';
 
 // 멘티를 위한 멘토 찾기
 export const findMentorForMentee = async (menteeId: number) => {

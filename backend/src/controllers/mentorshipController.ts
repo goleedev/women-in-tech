@@ -1,6 +1,6 @@
 // backend/src/controllers/mentorshipController.ts
 import { Request, Response } from 'express';
-import pool from '../config/database';
+import pool from '../database';
 import { findMentorForMentee } from '../services/mentorshipService';
 
 // Request 타입 확장

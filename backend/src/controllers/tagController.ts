@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import pool from '../config/database';
+import pool from '../database';
 
 // 전체 태그 목록 조회
 export const getAllTags = async (

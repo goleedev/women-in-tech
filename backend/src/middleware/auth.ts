@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import pool from '../config/database';
+import pool from '../database';
 
 // Request 타입 확장
 interface AuthRequest extends Request {

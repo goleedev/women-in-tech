@@ -1,14 +1,18 @@
 import http from 'http';
-import app from './app';
-import { setupSocketServer } from './socket';
 
+import { setUpSocket } from './socket';
+import app from './app';
+
+// Set up PORT
 const PORT = process.env.PORT || 5001;
 
+// Set up Server
 const server = http.createServer(app);
 
-// WebSocket 서버 설정
-const io = setupSocketServer(server);
+// Set up Socket Server
+const io = setUpSocket(server);
 
+// Set up Server Listener
 server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`🦾 Server is running in ${process.env.NODE_ENV} on ${PORT}`);
 });

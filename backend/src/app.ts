@@ -1,60 +1,62 @@
-// src/app.ts
 import express, { Application, Request, Response, NextFunction } from 'express';
+import { config } from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
-import { config } from 'dotenv';
+
+// Routes
 import authRoutes from './routes/authRoutes';
-import eventRoutes from './routes/eventRoutes'; // Add this line
-import userRoutes from './routes/userRoutes'; // Add this line if needed
+import userRoutes from './routes/userRoutes';
+import eventRoutes from './routes/eventRoutes';
 import mentorshipRoutes from './routes/mentorshipRoutes';
 import chatRoutes from './routes/chatRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import tagRoutes from './routes/tagRoutes';
 
-// 환경 변수 로드
+// Set up the env variables
 config();
 
+// Set up the express app
 const app: Application = express();
 
-// CORS 설정을 더 구체적으로 업데이트합니다
+// Set up CORS
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // Frontend URLs
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // If you're using cookies or auth
+    credentials: true, // enable set cookie
   })
 );
 
+// Set up the express app to parse data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// 기본 라우트
+// Set up the default route
 app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Women in Tech Networking Platform API' });
+  res.json({ message: '🏃🏻 API is running' });
 });
 
-// API 라우트 설정
+// Set up more routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/events', eventRoutes); // Add this line
-app.use('/api/v1/users', userRoutes); // Add this line if needed
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/mentorship', mentorshipRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/tags', tagRoutes);
 
-// 404 에러 처리
+// Set up 404
 app.use((req: Request, res: Response) => {
-  res.status(404).json({ message: '요청한 리소스를 찾을 수 없습니다' });
+  res.status(404).json({ message: '🙅🏻 Not found' });
 });
 
-// 글로벌 에러 핸들러
+// Set up global errors
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
   res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || '서버 에러가 발생했습니다',
+    message: err.message || '⚠️ Something went wrong',
   });
 });
 

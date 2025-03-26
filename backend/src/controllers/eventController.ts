@@ -1,5 +1,5 @@
 import { Request, RequestHandler, Response } from 'express';
-import pool from '../config/database';
+import pool from '../database';
 import jwt from 'jsonwebtoken';
 
 // Request 타입 확장
