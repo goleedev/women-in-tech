@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,14 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    // URL 파라미터에서 expired 확인
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === 'true') {
+      setLoginError('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+    }
+  }, []);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};

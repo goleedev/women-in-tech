@@ -36,6 +36,19 @@ export async function fetchAPI<T>(
       headers,
     });
 
+    // 401 Unauthorized 응답 처리 추가
+    if (response.status === 401) {
+      console.log('인증 만료, 로그아웃 처리');
+      // 로컬 스토리지에서 인증 정보 삭제
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('activeRole');
+
+      // 새로고침하여 로그인 페이지로 이동 (AuthContext에서 처리)
+      window.location.href = '/login?expired=true';
+      throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
+    }
+
     if (!response.ok) {
       const errorText = await response.text(); // 응답 텍스트 가져오기
       let errorData;
