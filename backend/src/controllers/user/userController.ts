@@ -1,42 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
-import pool from '../database';
+import pool from '../../database';
+import { AuthRequest } from '../../types/auth.type';
 
-// Request 타입 확장
-interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    email: string;
-    name: string;
-    role: string;
-  };
-}
-
-// 사용자 프로필 조회
+// Set up the user profile controller
 export const getUserProfile = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
+    // Get the user ID from the request
     const userId = req.params.id;
 
-    // 사용자 기본 정보 조회
+    // Check if the user ID is valid
     const userResult = await pool.query(
       `SELECT id, name, expertise, profession, seniority_level, country, role, bio, profile_image_url
        FROM users WHERE id = $1`,
       [userId]
     );
 
+    // Check if the user exists
     if (userResult.rows.length === 0) {
       res.status(404).json({
         success: false,
-        message: '사용자를 찾을 수 없습니다',
+        message: '⚠️ User not found',
       });
+
       return;
     }
 
+    // Check if the user exists
     const user = userResult.rows[0];
 
-    // 사용자 태그 조회
+    // Get the user's tags
     const tagsResult = await pool.query(
       `SELECT t.name
        FROM tags t
@@ -45,42 +40,49 @@ export const getUserProfile = async (
       [userId]
     );
 
+    // Set up the tags
     const tags = tagsResult.rows.map((tag) => tag.name);
 
+    // Return the user profile
     res.status(200).json({
       ...user,
       tags,
     });
-  } catch (error) {
-    console.error('사용자 프로필 조회 에러:', error);
+  } catch (error: any) {
+    // Handle errors during user profile retrieval
+    console.error('⚠️ Error while getting the profile:', error.message);
+
     res.status(500).json({
       success: false,
-      message: '사용자 프로필 조회 중 오류가 발생했습니다',
+      message: '⚠️ Error while getting the profile',
     });
   }
 };
 
-// 사용자 프로필 업데이트
+// Set up the user profile update controller
 export const updateUserProfile = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
   try {
+    // Get the user ID from the request
     const userId = req.params.id;
 
-    // 자신의 프로필만 수정 가능
+    // Check if the user ID is valid
     if (userId !== req.user?.id.toString() && req.user?.role !== 'admin') {
       res.status(403).json({
         success: false,
-        message: '다른 사용자의 프로필을 수정할 권한이 없습니다',
+        message: '⚠️ You do not have permission to update this profile',
       });
+
       return;
     }
 
+    // Get the profile data from the request body
     const { name, expertise, profession, seniority_level, country, bio } =
       req.body;
 
-    // 프로필 업데이트
+    // Update the user profile
     const updateResult = await pool.query(
       `UPDATE users
        SET name = COALESCE($1, name),
@@ -94,59 +96,68 @@ export const updateUserProfile = async (
       [name, expertise, profession, seniority_level, country, bio, userId]
     );
 
+    // Check if the user exists
     if (updateResult.rows.length === 0) {
       res.status(404).json({
         success: false,
-        message: '사용자를 찾을 수 없습니다',
+        message: '⚠️ User not found',
       });
+
       return;
     }
 
+    // Return the updated user profile
     res.status(200).json({
       success: true,
-      message: '프로필이 업데이트되었습니다',
+      message: '✨ Profile updated successfully',
       user: updateResult.rows[0],
     });
-  } catch (error) {
-    console.error('프로필 업데이트 에러:', error);
+  } catch (error: any) {
+    // Handle errors during user profile update
+    console.error('⚠️ Error while updating the profile:', error.message);
+
     res.status(500).json({
       success: false,
-      message: '프로필 업데이트 중 오류가 발생했습니다',
+      message: '⚠️ Error while updating the profile',
     });
   }
 };
 
-// 사용자 태그 업데이트
+// Set up the user tags update controller
 export const updateUserTags = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
+  // Connect to the database
   const client = await pool.connect();
 
   try {
+    // Get the user ID from the request
     const userId = req.params.id;
 
-    // 자신의 태그만 수정 가능
+    // Check if the user ID is valid
     if (userId !== req.user?.id.toString() && req.user?.role !== 'admin') {
       res.status(403).json({
         success: false,
-        message: '다른 사용자의 태그를 수정할 권한이 없습니다',
+        message: '⚠️ You do not have permission to update this profile',
       });
+
       return;
     }
 
+    // Get the tags from the request body
     const { tags } = req.body;
 
-    // 트랜잭션 시작
+    // Start a transaction
     await client.query('BEGIN');
 
-    // 기존 태그 삭제
+    // Delete existing tags
     await client.query('DELETE FROM user_tags WHERE user_id = $1', [userId]);
 
-    // 새 태그 추가
+    // Insert new tags
     if (tags && tags.length > 0) {
       for (const tagName of tags) {
-        // 태그가 존재하는지 확인
+        // Check if the tag exists
         let tagResult = await client.query(
           'SELECT id FROM tags WHERE name = $1',
           [tagName]
@@ -154,18 +165,20 @@ export const updateUserTags = async (
 
         let tagId;
 
-        // 태그가 존재하지 않으면 생성
+        // If the tag does not exist, create it
         if (tagResult.rows.length === 0) {
           const newTagResult = await client.query(
             'INSERT INTO tags (name, category) VALUES ($1, $2) RETURNING id',
-            [tagName, 'expertise'] // 기본 카테고리 설정
+            [tagName, 'expertise']
           );
+          // Get the new tag ID
           tagId = newTagResult.rows[0].id;
         } else {
+          // Get the existing tag ID
           tagId = tagResult.rows[0].id;
         }
 
-        // 사용자-태그 연결
+        // Insert the user-tag relationship
         await client.query(
           'INSERT INTO user_tags (user_id, tag_id) VALUES ($1, $2)',
           [userId, tagId]
@@ -173,24 +186,28 @@ export const updateUserTags = async (
       }
     }
 
-    // 트랜잭션 커밋
+    // Commit the transaction
     await client.query('COMMIT');
 
+    // Return the updated tags
     res.status(200).json({
       success: true,
-      message: '태그가 업데이트되었습니다',
+      message: '✨ Tags updated successfully',
       tags,
     });
-  } catch (error) {
-    // 트랜잭션 롤백
+  } catch (error: any) {
+    // Rollback the transaction in case of error
     await client.query('ROLLBACK');
 
-    console.error('태그 업데이트 에러:', error);
+    // Handle errors during tag update
+    console.error('⚠️ Error while updating tags:', error.message);
+
     res.status(500).json({
       success: false,
-      message: '태그 업데이트 중 오류가 발생했습니다',
+      message: '⚠️ Error while updating tags',
     });
   } finally {
+    // Release the database client
     client.release();
   }
 };

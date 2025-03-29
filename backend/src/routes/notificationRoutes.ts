@@ -1,23 +1,24 @@
 import express from 'express';
+
 import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-} from '../controllers/notificationController';
+} from '../controllers/notification/notificationController';
 import { protect } from '../middleware/auth';
 
+// Set up the router
 const router = express.Router();
 
-// 모든 알림 라우트는 인증 필요
+// Use the protect middleware to protect all routes
 router.use(protect);
 
-// 알림 목록 조회
+// Notifications
+// Set up a route to get all notifications
 router.get('/', getNotifications);
-
-// 특정 알림 읽음 처리
+// Set up a route to mark a notification as read
 router.put('/:id/read', markNotificationAsRead);
-
-// 모든 알림 읽음 처리
+// Set up a route to mark all notifications as read
 router.put('/read-all', markAllNotificationsAsRead);
 
 export default router;

@@ -1,13 +1,18 @@
 import express from 'express';
-import { register, login, getMe, logout } from '../controllers/authController';
-import { protect } from '../middleware/auth';
-import { registerValidation, loginValidation } from '../middleware/validation';
 
+import { registerValidation, loginValidation } from '../middleware/validation';
+import { protect } from '../middleware/auth';
+import { register } from '../controllers/auth/registerController';
+import { login, logout } from '../controllers/auth/loginController';
+import { getMyProfile } from '../controllers/auth/profileController';
+
+// Set up the router
 const router = express.Router();
 
+// Set up the routes
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
-router.get('/me', protect, getMe);
 router.post('/logout', protect, logout);
+router.get('/me', protect, getMyProfile);
 
 export default router;

@@ -7,10 +7,12 @@ import pool from './database';
 const timeout = 60000; // set up for 60s
 const interval = 25000; // set up for 25s
 
+// Set up the interface for the socket ID
 type ID = {
   id: number;
 };
 
+// Set up the interface for the socket error message
 enum AuthenticationErrorMessage {
   UNAUTHORIZED = '⚠️ Authentication error',
   NO_USER_FOUND = '⚠️ No User Found',
@@ -24,6 +26,7 @@ enum AuthenticationErrorMessage {
   MESSAGE_READ_ERROR = '⚠️ Error marking messages as read',
 }
 
+// Set up the interface for the socket success message
 enum AuthenticationSuccessMessage {
   AUTH_SUCCESS = '✨ Socket authentication success',
 }
@@ -385,6 +388,7 @@ export const setUpSocket = (server: Server) => {
       // Emit the user left to the joined rooms
       for (const roomName of joinedRooms) {
         const roomId = roomName.split(':')[1];
+
         socket.to(roomName).emit('user-left', {
           user_id: user.id,
           user_name: user.name,

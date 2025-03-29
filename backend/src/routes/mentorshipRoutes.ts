@@ -1,32 +1,30 @@
 import express from 'express';
+
+import { getUsers } from '../controllers/mentorship/mentorshipController';
 import {
-  getUsers,
   connectRequest,
-  updateConnectionStatus,
   getConnectionRequests,
   getMyConnections,
-  getRecommendedMentors,
-} from '../controllers/mentorshipController';
+  updateConnectionStatus,
+} from '../controllers/mentorship/connectionController';
+import { getRecommendedMentors } from '../controllers/mentorship/recommendationController';
 import { protect } from '../middleware/auth';
 
+// Set up the router
 const router = express.Router();
 
-// 멘토/멘티 검색
+// Mentorship
+// Set up a route to get all users
 router.get('/users', getUsers);
-
-// 멘토십 연결 요청
+// Set up a route to connect with a user
 router.post('/connect', protect, connectRequest);
-
-// 멘토십 연결 요청 수락/거절
+// Set up a route to update connection status
 router.put('/connect/:id', protect, updateConnectionStatus);
-
-// 멘토십 연결 요청 목록
+// Set up a route to get connection requests
 router.get('/connect/requests', protect, getConnectionRequests);
-
-// 내 멘토십 연결 목록
+// Set up a route to get my connections
 router.get('/connect', protect, getMyConnections);
-
-// 추천 멘토 조회
+// Set up a route to get recommended mentors
 router.get('/recommended', protect, getRecommendedMentors);
 
 export default router;

@@ -1,44 +1,49 @@
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { RequestHandler } from 'express';
 import { body, validationResult, ValidationChain } from 'express-validator';
 
-// 입력 유효성 검사 결과 확인
+// Check if the request body is valid when registering or logging in
 export const validateRequest: RequestHandler = (req, res, next): void => {
+  // Define the validation rules
   const errors = validationResult(req);
 
+  // Check if there are validation errors
   if (!errors.isEmpty()) {
     res.status(400).json({
       success: false,
       errors: errors.array(),
     });
-    return; // 🔹 Explicit return to satisfy TypeScript
+
+    return;
   }
 
   next();
 };
 
-// 회원가입 유효성 검사 규칙
+// Validation rules for user registration
 const registerValidationRules: ValidationChain[] = [
-  body('email').isEmail().withMessage('유효한 이메일 주소를 입력해주세요'),
-  body('name').notEmpty().withMessage('이름은 필수 입력 항목입니다'),
+  body('email').isEmail().withMessage('⚠️ Email is not valid'),
+  body('name').notEmpty().withMessage('⚠️ Name is required'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('비밀번호는 최소 6자 이상이어야 합니다'),
+    .isLength({ min: 8 })
+    .withMessage('⚠️ Password must be at least 8 characters long'),
   body('role')
     .isIn(['mentor', 'mentee'])
-    .withMessage('역할은 mentor 또는 mentee 중 하나여야 합니다'),
+    .withMessage('⚠️ Role must be either "mentor" or "mentee"'),
 ];
 
-// 로그인 유효성 검사 규칙
+// Validation rules for user login
 const loginValidationRules: ValidationChain[] = [
-  body('email').isEmail().withMessage('유효한 이메일 주소를 입력해주세요'),
-  body('password').notEmpty().withMessage('비밀번호를 입력해주세요'),
+  body('email').isEmail().withMessage('⚠️ Email is not valid'),
+  body('password').notEmpty().withMessage('⚠️ Password is required'),
 ];
 
-// **👀 이 부분을 RequestHandler[] 타입으로 명시**
+// Define the validation rules for registration
 export const registerValidation: RequestHandler[] = [
   ...registerValidationRules,
   validateRequest,
 ];
+
+// Define the validation rules for login
 export const loginValidation: RequestHandler[] = [
   ...loginValidationRules,
   validateRequest,

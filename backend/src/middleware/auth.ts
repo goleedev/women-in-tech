@@ -1,16 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+
 import pool from '../database';
 
-// Request 타입 확장
-interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    email: string;
-    name: string;
-    role: string;
-  };
-}
+import { AuthRequest } from '../types/auth.type';
 
 export const protect = async (
   req: AuthRequest,
@@ -19,7 +12,7 @@ export const protect = async (
 ): Promise<void> => {
   let token: string | undefined;
 
-  // Bearer 토큰 확인
+  // Check if token is in the request headers
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
@@ -27,60 +20,66 @@ export const protect = async (
     token = req.headers.authorization.split(' ')[1];
   }
 
+  // Check if token is in the cookies
   if (!token) {
     res.status(401).json({
       success: false,
-      message: '이 리소스에 접근하려면 로그인이 필요합니다',
+      message: '⚠️ Not authorized to access this route',
     });
+
     return;
   }
 
   try {
-    // 토큰 검증
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      id: number;
-    };
+    // Check if token is valid
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
 
-    // 사용자 정보 조회
+    // Check if user exists in the database
     const result = await pool.query(
       'SELECT id, email, name, role FROM users WHERE id = $1',
       [decoded.id]
     );
 
+    // Check if user exists
     if (result.rows.length === 0) {
       res.status(401).json({
         success: false,
-        message: '해당 토큰의 사용자를 찾을 수 없습니다',
+        message: '⚠️ No user found',
       });
+
       return;
     }
 
+    // Attach user to request object
     req.user = result.rows[0];
+
     next();
-  } catch (error) {
+  } catch (error: any) {
     res.status(401).json({
       success: false,
-      message: '인증에 실패했습니다',
+      message: '⚠️ Failed to authenticate token',
     });
   }
 };
 
-// 특정 역할 사용자만 접근 가능하도록 하는 미들웨어
+// Middleware to check if user has the required role
 export const authorize = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
         success: false,
-        message: '이 리소스에 접근하려면 로그인이 필요합니다',
+        message: '⚠️ Not authorized to access this route',
       });
+
       return;
     }
 
     if (!roles.includes(req.user.role)) {
       res.status(403).json({
         success: false,
-        message: '이 리소스에 접근할 권한이 없습니다',
+        message: '⚠️ Not authorized to access this route',
       });
+
       return;
     }
 
