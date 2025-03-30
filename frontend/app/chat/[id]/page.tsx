@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { ArrowLeft, Send, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+
 import { useAuth } from '@/app/context/AuthContext';
+
 import {
   getChatMessages,
   joinChatRoom,
@@ -12,14 +15,19 @@ import {
 } from '@/app/lib/api/chat';
 import { socketService } from '@/app/lib/api/socket';
 import { Message } from '@/app/lib/api/types';
-import Button from '@/app/ui/Button';
-import { ArrowLeft, Send, RefreshCw } from 'lucide-react';
+
 import { formatDate } from '@/app/lib/utils';
 
+import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading';
+
 export default function ChatRoomPage() {
+  // Get the room ID from the URL parameters
   const { id } = useParams();
   const roomId = id as string;
+  // Get the authentication context
   const { user } = useAuth();
+  // State variables for chat room and messages
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatRoom, setChatRoom] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,30 +42,29 @@ export default function ChatRoomPage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 채팅방 참가 및 메시지 불러오기
+  // Function to fetch messages from the server
   const fetchMessages = useCallback(async () => {
+    // Check if room ID is valid
     if (!roomId) return;
 
     try {
-      console.log(`채팅 메시지 가져오기 (HTTP)`);
-      // 메시지 불러오기
+      // Get messages from the server
       const messagesResponse = await getChatMessages(roomId);
 
-      const sortedMessages = [...messagesResponse.messages].reverse(); // 시간순 정렬
-      console.log(
-        `${sortedMessages.length}개의 메시지 로드됨:`,
-        sortedMessages
-      );
+      // Get the messages and reverse them for display
+      const sortedMessages = [...messagesResponse.messages].reverse();
+
       setMessages(sortedMessages);
       setHasMore(messagesResponse.has_more);
 
-      // 메시지 읽음 처리
+      // Mark messages as read
       await markMessagesAsRead(roomId);
 
       setError(null);
     } catch (err) {
-      console.error('채팅 메시지 로드 오류:', err);
-      setError('메시지를 불러오는 중 오류가 발생했습니다.');
+      // Handle error
+      console.error('⚠️ Error while getting messages:', err);
+      setError('⚠️ Error while getting messages');
     } finally {
       setRefreshing(false);
     }
@@ -66,29 +73,28 @@ export default function ChatRoomPage() {
   useEffect(() => {
     let isMounted = true;
 
+    // Join the chat room when the component mounts
     const joinRoom = async () => {
       if (!roomId) return;
 
       setLoading(true);
       try {
-        console.log(`채팅방 ${roomId} 참가 시도 (HTTP)`);
-        // 채팅방 참가
+        // Get chat room information
         const joinResponse = await joinChatRoom(roomId);
-        if (isMounted) {
-          setChatRoom(joinResponse.chat_room);
-          console.log('채팅방 정보 수신:', joinResponse.chat_room);
-        }
 
-        // 초기 메시지 로드
+        // Check if mounted
+        if (isMounted) setChatRoom(joinResponse.chat_room);
+
+        // Fetch more messages
         await fetchMessages();
 
-        if (isMounted) {
-          setIsInitialized(true);
-        }
+        // Set the chat room as joined
+        if (isMounted) setIsInitialized(true);
       } catch (err) {
-        console.error('채팅방 참가 오류:', err);
+        // Handle error
+        console.error('⚠️ Error while joining the chat room:', err);
         if (isMounted) {
-          setError('채팅방에 접속하는 중 오류가 발생했습니다.');
+          setError('⚠️ Error while joining the chat room');
         }
       } finally {
         if (isMounted) {
@@ -97,16 +103,17 @@ export default function ChatRoomPage() {
       }
     };
 
+    // Join the chat room
     joinRoom();
 
-    // 자동 새로고침 설정 (5초마다)
+    // Set up an interval for auto-refresh
     const autoRefreshInterval = setInterval(() => {
       if (isInitialized && !refreshing) {
-        console.log('자동 새로고침 실행');
         fetchMessages();
       }
     }, 5000);
 
+    // Clean up the interval and refresh timer on unmount
     return () => {
       isMounted = false;
       clearInterval(autoRefreshInterval);
@@ -116,44 +123,41 @@ export default function ChatRoomPage() {
     };
   }, [roomId, fetchMessages, isInitialized]);
 
-  // 메시지 수신 핸들러 (웹소켓)
+  // Handle new messages from the socket
   const handleNewMessage = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
-      console.log('새 메시지 수신 (웹소켓):', data);
-
-      // 데이터 정규화
       let messageData = data;
+
+      // Check if data has payload
       if (data.payload) {
         messageData = data.payload;
       }
 
-      // room_id 확인
+      // Check if message is from the current room
       const msgRoomId =
         messageData.room_id?.toString() || messageData.chat_room_id?.toString();
 
-      if (msgRoomId !== roomId.toString()) {
-        console.log(`다른 방 메시지 무시: ${msgRoomId} (현재: ${roomId})`);
-        return;
-      }
+      if (msgRoomId !== roomId.toString()) return;
 
-      // sender 필드 확인
+      // Check if message is from the current user
       if (!messageData.sender && messageData.sender_id) {
         messageData.sender = {
           id: messageData.sender_id,
-          name: messageData.sender_name || '알 수 없음',
+          name: messageData.sender_name || 'Unknown',
         };
       }
 
-      // 중복 메시지 확인
+      // Check if message is from the current user
       setMessages((prev) => {
-        // ID로 중복 확인
+        // Duplicate message check
         const msgId = messageData.id?.toString();
+
         if (msgId && prev.some((msg) => msg.id?.toString() === msgId)) {
           return prev;
         }
 
-        // 임시 메시지 확인 및 교체
+        // Temporary message check
         const tempIndex = prev.findIndex(
           (msg) =>
             typeof msg.id === 'string' &&
@@ -165,111 +169,115 @@ export default function ChatRoomPage() {
         if (tempIndex !== -1) {
           const newMessages = [...prev];
           newMessages[tempIndex] = messageData;
+
           return newMessages;
         }
 
-        // 새 메시지 추가
+        // Add new message
         return [...prev, messageData];
       });
 
-      // 메시지가 내 것이 아니면 읽음 처리
+      // Mark messages as read if not sent by the current user
       if (messageData.sender?.id !== user?.id) {
         markMessagesAsRead(roomId).catch(console.error);
       }
 
-      // 강제 새로고침 타이머 설정
+      // Refresh messages after a delay
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
       }
+
       refreshTimerRef.current = setTimeout(() => {
         fetchMessages();
-      }, 300); // 300ms 후에 새로고침
+      }, 300);
     },
     [roomId, user, fetchMessages]
   );
 
-  // 웹소켓 설정
+  // Set up the socket connection and event handlers
   useEffect(() => {
     if (!roomId || !user || !isInitialized) return;
 
-    console.log('웹소켓 설정 시작...');
-
-    // 웹소켓 연결
+    // Connect to the socket if not already connected
     if (!socketService?.isConnected()) {
       socketService?.connect();
     }
 
-    // 핸들러 등록
+    // Set up the socket event handlers
     socketService?.on('new-message', handleNewMessage);
 
-    // 채팅방 참가
+    // Join the chat room
     socketService?.joinRoom(roomId);
 
     return () => {
-      // 핸들러 해제
+      // Clean up the socket event handlers
       socketService?.off('new-message', handleNewMessage);
 
-      // 채팅방 퇴장
+      // Leave the chat room
       if (socketService?.isConnected()) {
         socketService?.leaveRoom(roomId);
       }
     };
   }, [roomId, user, isInitialized, handleNewMessage]);
 
-  // 수동 새로고침
+  // Refresh messages when the refresh button is clicked
   const handleRefresh = async () => {
     if (refreshing) return;
     setRefreshing(true);
     await fetchMessages();
   };
 
-  // 스크롤 관리
+  // Scroll to the bottom when new messages are added
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // 이전 메시지 로드
+  // Load more messages when the user scrolls to the top
   const loadMoreMessages = async () => {
+    // Check if there are more messages to load
     if (!hasMore || loading) return;
 
     try {
+      // Get the oldest message ID
       const oldestMsgId = messages.length > 0 ? messages[0].id : undefined;
+      // Fetch more messages from the server
       const messagesResponse = await getChatMessages(roomId, {
         before: oldestMsgId,
         limit: 20,
       });
 
-      // 스크롤 위치 기억
+      // Reverse the messages for display
       const container = messageContainerRef.current;
       const scrollHeight = container?.scrollHeight || 0;
 
       setMessages((prev) => [...messagesResponse.messages.reverse(), ...prev]);
       setHasMore(messagesResponse.has_more);
 
-      // 스크롤 위치 복원
+      // Scroll to the top of the container
       if (container) {
         const newScrollHeight = container.scrollHeight;
         container.scrollTop = newScrollHeight - scrollHeight;
       }
     } catch (error) {
-      console.error('이전 메시지 로드 오류:', error);
+      console.error('⚠️ Error while loading messages:', error);
     }
   };
 
-  // 메시지 전송
+  // Handle sending a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check if the message is empty or if a message is already being sent
     if (!newMessage.trim() || sendingMessage) return;
 
     setSendingMessage(true);
 
-    // 임시 ID 생성 (UI 표시용)
+    // Generate a temporary ID for the message
     const tempId = `temp_${Date.now()}`;
 
-    // 낙관적 UI 업데이트 - 메시지를 즉시 화면에 표시
+    // Create an optimistic message
     const optimisticMessage: Message = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       id: tempId as any, // 임시 ID
@@ -283,21 +291,18 @@ export default function ChatRoomPage() {
       created_at: new Date().toISOString(),
     };
 
-    // 메시지 상태 업데이트
     setMessages((prev) => [...prev, optimisticMessage]);
-    setNewMessage(''); // 입력창 초기화
+    setNewMessage('');
 
     try {
-      // 웹소켓으로 메시지 전송
+      // Send the message through the socket or HTTP API
       if (socketService?.isConnected()) {
-        console.log('웹소켓으로 메시지 전송');
         socketService.sendMessage(roomId, newMessage);
       } else {
-        // 웹소켓 연결이 없으면 HTTP API로 전송
-        console.log('HTTP API로 메시지 전송');
+        // Send the message through the API
         const response = await apiSendMessage(roomId, newMessage);
 
-        // 서버 응답으로 낙관적 메시지 교체
+        // Check if the response is successful
         if (response.success) {
           setMessages((prev) =>
             prev.map((msg) =>
@@ -312,17 +317,18 @@ export default function ChatRoomPage() {
         }
       }
 
-      // 새로고침 타이머 설정
+      // Refresh messages after sending
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
       }
+      // Set a timer to refresh messages
       refreshTimerRef.current = setTimeout(() => {
         fetchMessages();
-      }, 500); // 500ms 후에 새로고침
+      }, 500);
     } catch (err) {
-      console.error('메시지 전송 오류:', err);
+      console.error('⚠️ Error while sending messages:', err);
 
-      // 전송 실패 표시 (옵션)
+      // Handle error
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id.toString() === tempId
@@ -335,13 +341,16 @@ export default function ChatRoomPage() {
     }
   };
 
-  // 타이핑 상태 전송
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle typing event
   const handleTyping = () => {
+    // Check if the user is typing
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
 
+    // Set a timeout to send the typing event
     debounceTimeoutRef.current = setTimeout(() => {
       if (socketService?.isConnected()) {
         socketService?.sendTyping(roomId);
@@ -352,8 +361,8 @@ export default function ChatRoomPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 flex justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto my-auto px-4 py-20 min-h-screen flex justify-center">
+        <LoadingSpinner />
       </div>
     );
   }
@@ -362,11 +371,11 @@ export default function ChatRoomPage() {
     return (
       <div className="container mx-auto px-4 py-12">
         <div className="bg-red-50 text-red-600 p-4 rounded-md text-center">
-          {error || '채팅방을 찾을 수 없습니다.'}
+          {error || 'Chat room not found'}
         </div>
         <div className="text-center mt-4">
           <Link href="/chat">
-            <Button variant="outline">채팅 목록으로 돌아가기</Button>
+            <Button variant="outline">Back to chats</Button>
           </Link>
         </div>
       </div>
@@ -396,12 +405,12 @@ export default function ChatRoomPage() {
             {socketService?.isConnected() ? (
               <span className="text-green-600 flex items-center">
                 <span className="w-2 h-2 bg-green-600 rounded-full mr-1"></span>
-                연결됨
+                Connected
               </span>
             ) : (
               <span className="text-yellow-600 flex items-center">
                 <span className="w-2 h-2 bg-yellow-600 rounded-full mr-1"></span>
-                오프라인
+                Offline
               </span>
             )}
           </div>
@@ -420,20 +429,21 @@ export default function ChatRoomPage() {
               onClick={loadMoreMessages}
               disabled={loading}
             >
-              이전 메시지 불러오기
+              Load previous messages
             </Button>
           </div>
         )}
 
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-500">
-            <p>메시지가 없습니다. 첫 메시지를 보내보세요!</p>
+            <p>Start a conversation!</p>
           </div>
         ) : (
           <div className="space-y-4">
             {messages.map((message, index) => {
+              // Check if the message is from the current user
               const isMyMessage = message.sender.id === user?.id;
-              // 임시 메시지인지 확인 (string으로 시작하는 ID)
+              // Check if the message is a temporary message
               const isTempMessage =
                 typeof message.id === 'string' &&
                 (message.id as string).startsWith('temp_');
@@ -466,7 +476,7 @@ export default function ChatRoomPage() {
                       } text-right`}
                     >
                       {formatDate(message.created_at).split(' ')[1]}
-                      {isTempMessage && ' (전송 중...)'}
+                      {isTempMessage && ' (Sending...)'}
                     </div>
                   </div>
                 </div>
@@ -480,7 +490,7 @@ export default function ChatRoomPage() {
       <form onSubmit={handleSendMessage} className="mt-4 flex">
         <input
           type="text"
-          placeholder="메시지를 입력하세요..."
+          placeholder="Type a message..."
           className="flex-grow rounded-l-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
@@ -494,7 +504,7 @@ export default function ChatRoomPage() {
           disabled={!newMessage.trim() || sendingMessage}
         >
           <Send size={16} className="mr-1" />
-          전송
+          Send
         </Button>
       </form>
     </div>

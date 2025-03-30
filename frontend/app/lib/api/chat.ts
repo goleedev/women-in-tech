@@ -1,13 +1,14 @@
-// app/lib/api/chat.ts
 'use client';
 
 import { fetchAPI } from './client';
 import { ChatRoom, Message } from './types';
 
+// Create a function to fetch chat rooms
 export const getChatRooms = async (): Promise<{ chat_rooms: ChatRoom[] }> => {
   return await fetchAPI<{ chat_rooms: ChatRoom[] }>('/chat/rooms');
 };
 
+// Create a function to join chat room
 export const joinChatRoom = async (
   roomId: number | string
 ): Promise<{
@@ -32,12 +33,15 @@ export const joinChatRoom = async (
   });
 };
 
+// Create a function to get all chat messages
 export const getChatMessages = async (
   roomId: number | string,
   params?: { before?: number; limit?: number }
 ): Promise<{ messages: Message[]; has_more: boolean }> => {
+  // Get the query parameters
   const queryParams = new URLSearchParams();
 
+  // Append the parameters to the query string
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -46,6 +50,7 @@ export const getChatMessages = async (
     });
   }
 
+  // Construct the URL with query parameters
   const queryString = queryParams.toString()
     ? `?${queryParams.toString()}`
     : '';
@@ -54,6 +59,7 @@ export const getChatMessages = async (
   );
 };
 
+// Create a function to send a message
 export const sendMessage = async (
   roomId: number | string,
   content: string
@@ -70,6 +76,7 @@ export const sendMessage = async (
   });
 };
 
+// Create a function to mark a message as read
 export const markMessagesAsRead = async (
   roomId: number | string
 ): Promise<{

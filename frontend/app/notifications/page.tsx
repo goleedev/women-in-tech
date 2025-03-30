@@ -1,53 +1,70 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Bell, BellOff } from 'lucide-react';
 import Link from 'next/link';
+
 import { useAuth } from '@/app/context/AuthContext';
+
 import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
 } from '@/app/lib/api/notification';
 import { Notification } from '@/app/lib/api/types';
-import { Card, CardContent } from '@/app/ui/Card';
-import Button from '@/app/ui/Button';
+
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading';
+
 import { formatDate } from '@/app/lib/utils';
-import { Bell, BellOff, MessageSquare, Calendar, UserPlus } from 'lucide-react';
 
 export default function NotificationsPage() {
+  // Get authentication context
   const { isAuthenticated } = useAuth();
+
+  // State variables for notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
 
+  // Fetch notifications when the component mounts or when authentication status changes
   useEffect(() => {
     const fetchNotifications = async () => {
+      // Check if user is authenticated
       if (!isAuthenticated) return;
 
       setLoading(true);
       try {
+        // Fetch notifications response from the API
         const response = await getNotifications();
+
+        // Set notifications and unread count
         setNotifications(response.notifications);
         setUnreadCount(response.unread_count);
         setError(null);
       } catch (err) {
-        console.error('알림 목록 조회 오류:', err);
-        setError('알림 목록을 불러오는 중 오류가 발생했습니다.');
+        // Handle error
+        console.error('⚠️ Error while fetching notifications:', err);
+        setError('⚠️ Error while fetching notifications');
       } finally {
         setLoading(false);
       }
     };
 
+    // Call the fetch function
     fetchNotifications();
   }, [isAuthenticated]);
 
+  // Function to mark a notification as read
   const handleMarkAsRead = async (notificationId: number) => {
     try {
+      // Mark notification as read using the API
       await markNotificationAsRead(notificationId);
 
-      // 알림 목록 업데이트
+      // Update the notification state
       setNotifications((prev) =>
         prev.map((notification) =>
           notification.id === notificationId
@@ -56,55 +73,41 @@ export default function NotificationsPage() {
         )
       );
 
-      // 읽지 않은 알림 수 업데이트
+      // Decrement the unread count
       setUnreadCount((prev) => prev - 1);
     } catch (err) {
-      console.error('알림 읽음 처리 오류:', err);
+      console.error('⚠️ Error while marking notifications as read:', err);
     }
   };
 
+  // Function to mark all notifications as read
   const handleMarkAllAsRead = async () => {
     try {
+      // Mark all notifications as read using the API
       await markAllNotificationsAsRead();
 
-      // 모든 알림 읽음 처리
+      // Update the notification state
       setNotifications((prev) =>
         prev.map((notification) => ({ ...notification, is_read: true }))
       );
 
-      // 읽지 않은 알림 수 초기화
+      // Reset the unread count
       setUnreadCount(0);
     } catch (err) {
-      console.error('모든 알림 읽음 처리 오류:', err);
+      console.error('⚠️ Error while marking all notifications as read:', err);
     }
   };
 
-  // 현재 탭에 따라 필터링된 알림 목록
+  // Filter notifications based on the active tab
   const filteredNotifications =
     activeTab === 'all'
       ? notifications
       : notifications.filter((notification) => !notification.is_read);
 
-  // 알림 아이콘 선택
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'event':
-        return <Calendar className="flex-shrink-0 text-blue-600" size={20} />;
-      case 'mentorship_request':
-        return <UserPlus className="flex-shrink-0 text-green-600" size={20} />;
-      case 'message':
-        return (
-          <MessageSquare className="flex-shrink-0 text-purple-600" size={20} />
-        );
-      default:
-        return <Bell className="flex-shrink-0 text-gray-600" size={20} />;
-    }
-  };
-
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 flex justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto min-h-screen px-4 py-20 flex justify-center">
+        <LoadingSpinner />
       </div>
     );
   }
@@ -127,12 +130,11 @@ export default function NotificationsPage() {
         {unreadCount > 0 && (
           <Button variant="outline" onClick={handleMarkAllAsRead}>
             <BellOff size={16} className="mr-1" />
-            모두 읽음으로 표시
+            Mark all as read
           </Button>
         )}
       </div>
 
-      {/* 탭 */}
       <div className="border-b border-gray-200 mb-6">
         <div className="flex space-x-8">
           <button
@@ -143,7 +145,7 @@ export default function NotificationsPage() {
             }`}
             onClick={() => setActiveTab('all')}
           >
-            모든 알림
+            All Notifications
           </button>
           <button
             className={`py-2 px-1 -mb-px ${
@@ -153,7 +155,7 @@ export default function NotificationsPage() {
             }`}
             onClick={() => setActiveTab('unread')}
           >
-            읽지 않은 알림
+            Unread Notifications
             {unreadCount > 0 && (
               <span className="ml-2 bg-red-100 text-red-600 rounded-full px-2 py-0.5 text-xs">
                 {unreadCount}
@@ -167,8 +169,8 @@ export default function NotificationsPage() {
         <div className="text-center py-12">
           <div className="text-gray-500">
             {activeTab === 'all'
-              ? '알림이 없습니다.'
-              : '읽지 않은 알림이 없습니다.'}
+              ? 'No notifications.'
+              : 'No unread notifications.'}
           </div>
         </div>
       ) : (
@@ -183,7 +185,7 @@ export default function NotificationsPage() {
               <CardContent className="p-4">
                 <div className="flex items-start">
                   <div className="mr-4 mt-1">
-                    {getNotificationIcon(notification.type)}
+                    <Bell className="flex-shrink-0 text-gray-600" size={20} />
                   </div>
 
                   <div className="flex-grow">
@@ -205,19 +207,18 @@ export default function NotificationsPage() {
                         <button
                           onClick={() => handleMarkAsRead(notification.id)}
                           className="ml-4 text-gray-500 hover:text-gray-700 focus:outline-none"
-                          aria-label="읽음으로 표시"
+                          aria-label="Mark as read"
                         >
                           <BellOff size={16} />
                         </button>
                       )}
                     </div>
 
-                    {/* 알림 유형에 따른 액션 버튼 */}
                     <div className="mt-3">
                       {notification.type === 'event' && (
                         <Link href={`/events/${notification.reference_id}`}>
                           <Button variant="outline" size="sm">
-                            이벤트 보기
+                            View Event
                           </Button>
                         </Link>
                       )}
@@ -225,7 +226,7 @@ export default function NotificationsPage() {
                       {notification.type === 'mentorship_request' && (
                         <Link href="/mentorship/connections">
                           <Button variant="outline" size="sm">
-                            요청 확인
+                            View Request
                           </Button>
                         </Link>
                       )}
@@ -234,7 +235,7 @@ export default function NotificationsPage() {
                         notification.reference_type === 'message' && (
                           <Link href={`/chat/${notification.reference_id}`}>
                             <Button variant="outline" size="sm">
-                              메시지 보기
+                              View Message
                             </Button>
                           </Link>
                         )}

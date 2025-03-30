@@ -2,44 +2,47 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/app/context/AuthContext';
 import { Bell, Menu, X } from 'lucide-react';
+
+import { useAuth } from '@/app/context/AuthContext';
+
 import RoleSwitcher from '../mentorship/RuleSwitcher';
 
 export default function Header() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  // Define state variables for mobile menu and unread notifications
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
-  // 알림 수 가져오기
+  // Get user authentication status and logout function from AuthContext
+  const { user, isAuthenticated, logout } = useAuth();
+
+  // Effect to fetch unread notifications count when user is authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      // API를 통해 읽지 않은 알림 수 가져오기 (나중에 구현)
-      // 지금은 임시로 0으로 설정
-      setUnreadCount(0);
-    }
+    if (isAuthenticated) setUnreadCount(0);
   }, [isAuthenticated]);
 
   return (
-    <header className="bg-blue-600 text-white">
+    <header className="bg-black text-white fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="font-bold text-xl">
-            WiT Network
+            💻 Women in Tech
           </Link>
 
-          {/* 데스크톱 메뉴 */}
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-6">
             <Link href="/events" className="hover:text-blue-200">
-              이벤트
+              Events
             </Link>
             <Link href="/mentorship" className="hover:text-blue-200">
-              멘토십
+              Mentorship
             </Link>
+
+            {/* Show Chat Menu when user is authenticated */}
             {isAuthenticated && (
               <>
                 <Link href="/chat" className="hover:text-blue-200">
-                  채팅
+                  Chat
                 </Link>
                 <Link
                   href="/notifications"
@@ -53,12 +56,13 @@ export default function Header() {
                   )}
                 </Link>
 
+                {/* Show Role Switcher */}
                 {user && (user.secondary_role || user.role) && <RoleSwitcher />}
               </>
             )}
           </nav>
 
-          {/* 사용자 메뉴 */}
+          {/* Desktop Profile and Logout */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
@@ -69,51 +73,51 @@ export default function Header() {
                   onClick={logout}
                   className="px-4 py-2 bg-blue-700 hover:bg-blue-800 rounded"
                 >
-                  로그아웃
+                  Logout
                 </button>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
                 <Link href="/login" className="hover:text-blue-200">
-                  로그인
+                  Login
                 </Link>
                 <Link
                   href="/register"
-                  className="px-4 py-2 bg-blue-700 hover:bg-blue-800 rounded"
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-700 rounded"
                 >
-                  회원가입
+                  Sign Up
                 </Link>
               </div>
             )}
           </div>
 
-          {/* 모바일 메뉴 버튼 */}
+          {/* Mobile Navigation */}
           <div className="md:hidden">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
-        {/* 모바일 메뉴 */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-3">
+          <div className="md:hidden py-4 space-y-4 h-[100vh]">
             <Link
               href="/events"
               className="block py-2 hover:text-blue-200"
               onClick={() => setMobileMenuOpen(false)}
             >
-              이벤트
+              Events
             </Link>
             <Link
               href="/mentorship"
               className="block py-2 hover:text-blue-200"
               onClick={() => setMobileMenuOpen(false)}
             >
-              멘토십
+              Mentorship
             </Link>
             {isAuthenticated && (
               <>
@@ -122,14 +126,14 @@ export default function Header() {
                   className="block py-2 hover:text-blue-200"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  채팅
+                  Chat
                 </Link>
                 <Link
                   href="/notifications"
                   className="block py-2 hover:text-blue-200"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  알림 {unreadCount > 0 && `(${unreadCount})`}
+                  Notification {unreadCount > 0 && `(${unreadCount})`}
                 </Link>
 
                 <Link
@@ -137,7 +141,7 @@ export default function Header() {
                   className="block py-2 hover:text-blue-200"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  프로필
+                  Profile
                 </Link>
 
                 {user && (user.secondary_role || user.role) && <RoleSwitcher />}
@@ -149,7 +153,7 @@ export default function Header() {
                   }}
                   className="block w-full text-left py-2 hover:text-blue-200"
                 >
-                  로그아웃
+                  Logout
                 </button>
               </>
             )}
@@ -160,14 +164,14 @@ export default function Header() {
                   className="block py-2 hover:text-blue-200"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  로그인
+                  Login
                 </Link>
                 <Link
                   href="/register"
                   className="block py-2 hover:text-blue-200"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  회원가입
+                  Sign Up
                 </Link>
               </>
             )}

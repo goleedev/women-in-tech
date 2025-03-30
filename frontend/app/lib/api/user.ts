@@ -1,9 +1,9 @@
-// app/lib/api/user.ts
 'use client';
 
 import { fetchAPI } from './client';
 import { User } from './types';
 
+// Define the types for the profile update data
 export interface ProfileUpdateData {
   name?: string;
   expertise?: string;
@@ -13,24 +13,28 @@ export interface ProfileUpdateData {
   bio?: string;
 }
 
+// Define the types for the user response from the API
 export interface UserResponse {
   success: boolean;
   message: string;
   user: User;
 }
 
+// Define the types for the tags response from the API
 export interface TagsResponse {
   success: boolean;
   message: string;
   tags: string[];
 }
 
+// Create a function to fetch user profile
 export const getUserProfile = async (
   userId: number | string
 ): Promise<User & { tags: string[] }> => {
   return await fetchAPI<User & { tags: string[] }>(`/users/${userId}`);
 };
 
+// Create a function to update user profile
 export const updateUserProfile = async (
   userId: number | string,
   profileData: ProfileUpdateData
@@ -41,6 +45,7 @@ export const updateUserProfile = async (
   });
 };
 
+// Create a function to update user tags
 export const updateUserTags = async (
   userId: number | string,
   tags: string[]
@@ -49,40 +54,4 @@ export const updateUserTags = async (
     method: 'PUT',
     body: JSON.stringify({ tags }),
   });
-};
-
-export const uploadProfileImage = async (
-  userId: number | string,
-  imageFile: File
-): Promise<{
-  success: boolean;
-  message: string;
-  profile_image_url: string;
-}> => {
-  const formData = new FormData();
-  formData.append('image', imageFile);
-
-  const token = localStorage.getItem('token');
-  const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
-
-  const response = await fetch(
-    `${API_BASE_URL}/users/${userId}/profile-image`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: token ? `Bearer ${token}` : '',
-      },
-      body: formData,
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ message: '프로필 이미지 업로드 실패' }));
-    throw new Error(error.message || '프로필 이미지 업로드 실패');
-  }
-
-  return await response.json();
 };

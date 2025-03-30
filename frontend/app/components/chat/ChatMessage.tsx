@@ -1,7 +1,7 @@
 import { User } from '@/app/lib/api/types';
 import { formatDate } from '@/app/lib/utils';
-import Image from 'next/image';
 
+// ChatMessage Interface
 interface ChatMessageProps {
   id: number;
   content: string;
@@ -20,6 +20,7 @@ export default function ChatMessage({
   created_at,
   currentUser,
 }: ChatMessageProps) {
+  // Check if the message is sent by the current user
   const isMyMessage = sender.id === currentUser?.id;
 
   return (
@@ -29,20 +30,9 @@ export default function ChatMessage({
       {!isMyMessage && (
         <div className="flex-shrink-0 mr-2">
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-            {sender.profile_image_url ? (
-              <Image
-                unoptimized
-                width={32}
-                height={32}
-                src={sender.profile_image_url}
-                alt={sender.name}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <span className="font-medium text-blue-600">
-                {sender.name.charAt(0)}
-              </span>
-            )}
+            <span className="font-medium text-blue-600">
+              {sender.name.charAt(0)}
+            </span>
           </div>
         </div>
       )}

@@ -1,77 +1,92 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+
 import { useAuth } from '../context/AuthContext';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '../ui/Card';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // State variables for form inputs and error messages
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {}
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Context for authentication
   const { login } = useAuth();
+
+  // Router for navigation
   const router = useRouter();
 
   useEffect(() => {
-    // URL 파라미터에서 expired 확인
+    // Get URL parameters
     const params = new URLSearchParams(window.location.search);
+
+    // Redirect to home if authentication is already expired
     if (params.get('expired') === 'true') {
-      setLoginError('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+      setLoginError('⚠️ Authentication expired. Please log in again.');
     }
   }, []);
 
+  // Function to validate form inputs
   const validateForm = () => {
+    // Set initial error state
     const newErrors: { email?: string; password?: string } = {};
+
     let isValid = true;
 
+    // Validate email input
     if (!email) {
-      newErrors.email = '이메일을 입력해주세요';
+      newErrors.email = '⚠️ Email is required';
+
       isValid = false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = '유효한 이메일 주소를 입력해주세요';
+      newErrors.email = '⚠️ Invalid email address';
+
       isValid = false;
     }
 
+    // Validate password input
     if (!password) {
-      newErrors.password = '비밀번호를 입력해주세요';
+      newErrors.password = '⚠️ Password is required';
+
       isValid = false;
     }
 
+    // Set error state
     setErrors(newErrors);
+
     return isValid;
   };
 
+  // Function to handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
 
+    // Check if form is valid
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
+      // Call the login function from the context
       await login(email, password);
+
       router.push('/');
     } catch (error) {
-      console.error('Login error:', error);
+      // Handle login error
       setLoginError(
         error instanceof Error
           ? error.message
-          : '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
+          : '⚠️ Failed to login. Please try again.'
       );
     } finally {
       setIsSubmitting(false);
@@ -79,22 +94,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            로그인
-          </CardTitle>
-          <CardDescription className="text-center">
-            계정에 로그인하여 이벤트 참여 및 멘토링을 시작하세요
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-[calc(100vh-200px)] m-auto flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md">
+        <h2 className="text-2xl font-bold text-center">
+          Log in to your account
+        </h2>
+        <div>
           {loginError && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
               {loginError}
             </div>
           )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               id="email"
@@ -110,34 +121,24 @@ export default function LoginPage() {
               id="password"
               type="password"
               label="비밀번호"
-              placeholder="••••••••"
+              placeholder="********"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
               disabled={isSubmitting}
             />
-            <Button type="submit" fullWidth isLoading={isSubmitting}>
-              로그인
+            <Button type="submit" className="w-full">
+              Log In
             </Button>
           </form>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-sm text-center text-gray-500">
-            <Link
-              href="/forgot-password"
-              className="text-blue-600 hover:underline"
-            >
-              비밀번호를 잊으셨나요?
-            </Link>
-          </div>
-          <div className="text-sm text-center text-gray-500">
-            계정이 없으신가요?{' '}
-            <Link href="/register" className="text-blue-600 hover:underline">
-              회원가입
-            </Link>
-          </div>
-        </CardFooter>
-      </Card>
+        </div>
+        <div className="text-sm text-center text-gray-500">
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="text-blue-600 hover:underline">
+            Sign Up
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

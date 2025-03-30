@@ -1,21 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ArrowLeft, Check, X, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
+
 import { useAuth } from '@/app/context/AuthContext';
+
 import {
   getMyConnections,
   getConnectionRequests,
   updateConnectionStatus,
 } from '@/app/lib/api/mentorship';
 import { MentorshipConnection } from '@/app/lib/api/types';
-import { Card, CardHeader, CardTitle, CardContent } from '@/app/ui/Card';
-import Button from '@/app/ui/Button';
+
 import { formatDate } from '@/app/lib/utils';
-import { ArrowLeft, Check, X, MessageSquare } from 'lucide-react';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 export default function MentorshipConnectionsPage() {
+  // Authentication context
   const { user } = useAuth();
+  // State variables to manage mentorship connections and loading state
   const [activeTab, setActiveTab] = useState<'active' | 'pending'>('active');
   const [connections, setConnections] = useState<MentorshipConnection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<
@@ -25,15 +32,17 @@ export default function MentorshipConnectionsPage() {
   const [actionInProgress, setActionInProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Effect to fetch mentorship connections and requests
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 활성화된 연결 가져오기
+        // Get active connections
         const activeResponse = await getMyConnections();
+        // Set active connections to state
         setConnections(activeResponse.connections);
 
-        // 멘토인 경우에만 대기 중인 요청 가져오기
+        // Get pending requests if the user is a mentor
         if (user?.role === 'mentor') {
           const pendingResponse = await getConnectionRequests({
             status: 'pending',
@@ -43,22 +52,26 @@ export default function MentorshipConnectionsPage() {
 
         setError(null);
       } catch (err) {
-        console.error('멘토십 연결 목록 조회 오류:', err);
-        setError('멘토십 연결 정보를 불러오는 중 오류가 발생했습니다.');
+        // Handle error
+        console.error('⚠️ Error while getting mentorship connections:', err);
+        setError('⚠️ Error while getting mentorship connections');
       } finally {
         setLoading(false);
       }
     };
 
+    // Call the fetch function
     fetchData();
   }, [user]);
 
+  // Function to handle accepting a connection request
   const handleAccept = async (connectionId: number) => {
     setActionInProgress(connectionId);
     try {
+      // Update connection status to 'accepted'
       await updateConnectionStatus(connectionId, 'accepted');
 
-      // 현재 요청에서 제거하고 활성 연결에 추가
+      // Remove the accepted request from pending requests
       const acceptedRequest = pendingRequests.find(
         (req) => req.id === connectionId
       );
@@ -72,26 +85,29 @@ export default function MentorshipConnectionsPage() {
         ]);
       }
 
-      // 활성 탭으로 전환
+      // Set the active tab to 'active'
       setActiveTab('active');
     } catch (err) {
-      console.error('멘토십 요청 수락 오류:', err);
+      console.error('⚠️ Error while updating mentorship status:', err);
     } finally {
       setActionInProgress(null);
     }
   };
 
+  // Function to handle rejecting a connection request
   const handleReject = async (connectionId: number) => {
     setActionInProgress(connectionId);
     try {
+      // Update connection status to 'rejected'
       await updateConnectionStatus(connectionId, 'rejected');
 
-      // 현재 요청에서 제거
+      // Remove the rejected request from pending requests
       setPendingRequests((prev) =>
         prev.filter((req) => req.id !== connectionId)
       );
     } catch (err) {
-      console.error('멘토십 요청 거절 오류:', err);
+      // Handle error
+      console.error('⚠️ Error while updating mentorship status:', err);
     } finally {
       setActionInProgress(null);
     }
@@ -104,12 +120,11 @@ export default function MentorshipConnectionsPage() {
         className="flex items-center text-blue-600 hover:underline mb-6"
       >
         <ArrowLeft size={16} className="mr-1" />
-        멘토십 목록으로 돌아가기
+        Back to Mentorship
       </Link>
 
-      <h1 className="text-3xl font-bold mb-6">내 멘토십 연결</h1>
+      <h1 className="text-3xl font-bold mb-6">My mentorship connections</h1>
 
-      {/* 탭 */}
       <div className="border-b border-gray-200 mb-6">
         <div className="flex space-x-8">
           <button
@@ -120,7 +135,7 @@ export default function MentorshipConnectionsPage() {
             }`}
             onClick={() => setActiveTab('active')}
           >
-            활성 연결
+            Active
           </button>
           {user?.role === 'mentor' && (
             <button
@@ -131,7 +146,7 @@ export default function MentorshipConnectionsPage() {
               }`}
               onClick={() => setActiveTab('pending')}
             >
-              대기 중인 요청
+              Pending
               {pendingRequests.length > 0 && (
                 <span className="ml-2 bg-red-100 text-red-600 rounded-full px-2 py-0.5 text-xs">
                   {pendingRequests.length}
@@ -143,8 +158,8 @@ export default function MentorshipConnectionsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex justify-center py-20 min-h-screen mx-auto my-auto">
+          <LoadingSpinner />
         </div>
       ) : error ? (
         <div className="bg-red-50 text-red-600 p-4 rounded-md text-center">
@@ -154,11 +169,11 @@ export default function MentorshipConnectionsPage() {
         connections.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">
-              활성화된 멘토십 연결이 없습니다.
+              No active mentorship connections found.
             </p>
             <Link href="/mentorship">
               <Button>
-                {user?.role === 'mentor' ? '멘티 찾기' : '멘토 찾기'}
+                {user?.role === 'mentor' ? 'Find Mentee' : 'Find Mentor'}
               </Button>
             </Link>
           </div>
@@ -174,34 +189,34 @@ export default function MentorshipConnectionsPage() {
                 <Card key={connection.id}>
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      {isUserMentor ? '멘티' : '멘토'}: {otherPerson.name}
+                      {isUserMentor ? 'Mentee' : 'Mentor'}: {otherPerson.name}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <div>
-                        <span className="text-gray-500">전문 분야:</span>{' '}
+                        <span className="text-gray-500">Expertise:</span>{' '}
                         <span>{otherPerson.expertise}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">직업:</span>{' '}
+                        <span className="text-gray-500">Profession:</span>{' '}
                         <span>{otherPerson.profession}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">연결 날짜:</span>{' '}
+                        <span className="text-gray-500">Connection Date:</span>{' '}
                         <span>{formatDate(connection.created_at)}</span>
                       </div>
 
                       <div className="pt-4 flex justify-between">
                         <Link href={`/mentorship/users/${otherPerson.id}`}>
-                          <Button variant="outline">프로필 보기</Button>
+                          <Button variant="outline">View Profile</Button>
                         </Link>
 
                         {connection.chat_room_id && (
                           <Link href={`/chat/${connection.chat_room_id}`}>
                             <Button>
                               <MessageSquare size={16} className="mr-1" />
-                              채팅하기
+                              Chat
                             </Button>
                           </Link>
                         )}
@@ -213,10 +228,9 @@ export default function MentorshipConnectionsPage() {
             })}
           </div>
         )
-      ) : // 대기 중인 요청 탭
-      pendingRequests.length === 0 ? (
+      ) : pendingRequests.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">대기 중인 멘토십 요청이 없습니다.</p>
+          <p className="text-gray-500">No pending connections</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -232,7 +246,7 @@ export default function MentorshipConnectionsPage() {
                       {request.mentee.expertise} • {request.mentee.profession}
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      요청일: {formatDate(request.created_at)}
+                      Request Date: {formatDate(request.created_at)}
                     </p>
 
                     {request.message && (
@@ -250,10 +264,9 @@ export default function MentorshipConnectionsPage() {
                       className="text-green-600 border-green-600 hover:bg-green-50"
                       onClick={() => handleAccept(request.id)}
                       disabled={actionInProgress === request.id}
-                      isLoading={actionInProgress === request.id}
                     >
                       <Check size={16} className="mr-1" />
-                      수락
+                      Accept
                     </Button>
 
                     <Button
@@ -263,7 +276,7 @@ export default function MentorshipConnectionsPage() {
                       disabled={actionInProgress === request.id}
                     >
                       <X size={16} className="mr-1" />
-                      거절
+                      Reject
                     </Button>
                   </div>
                 </div>

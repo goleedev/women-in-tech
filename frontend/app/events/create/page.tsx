@@ -1,20 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Plus, X } from 'lucide-react';
 import Link from 'next/link';
+
 import { useAuth } from '@/app/context/AuthContext';
+
 import { createEvent } from '@/app/lib/api/event';
 import { getAllTags } from '@/app/lib/api/tag';
-import { Card, CardHeader, CardTitle, CardContent } from '@/app/ui/Card';
-import Button from '@/app/ui/Button';
-import Input from '@/app/ui/Input';
-import { ArrowLeft, Plus, X } from 'lucide-react';
-import { useEffect } from 'react';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function CreateEventPage() {
-  const router = useRouter();
+  // Authentication context
   const { isAuthenticated, user } = useAuth();
+  // Get the router
+  const router = useRouter();
+  // State variables for form data
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -26,15 +31,18 @@ export default function CreateEventPage() {
     is_online: false,
     online_link: '',
   });
+  // State variables for tags
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  // State variables for form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // 인증 및 권한 체크
+  // Effect to check authentication and fetch tags
   useEffect(() => {
+    // Check if user is authenticated and has the correct role
     if (!isAuthenticated) {
       router.push('/login?redirect=/events/create');
       return;
@@ -45,107 +53,142 @@ export default function CreateEventPage() {
       return;
     }
 
-    // 태그 목록 가져오기
+    // Function to fetch available tags
     const fetchTags = async () => {
       try {
+        // Get all tags from the API
         const response = await getAllTags();
+        // Extract unique tag names
         const uniqueTags = Array.from(
           new Set(response.tags.map((tag) => tag.name))
         );
+
         setAvailableTags(uniqueTags);
       } catch (error) {
-        console.error('태그 가져오기 오류:', error);
+        // Handle error
+        console.error('⚠️ Error while getting tags:', error);
       }
     };
 
     fetchTags();
   }, [isAuthenticated, user, router]);
 
+  // Function to handle form input changes=
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
+    // Get the name, value, and type of the input
     const { name, value, type } = e.target;
 
+    // Update the form data state
     if (type === 'checkbox') {
+      // If the input is a checkbox, set the value to true or false
       const checked = (e.target as HTMLInputElement).checked;
+      // Update the form data state with the checkbox value
       setFormData((prev) => ({ ...prev, [name]: checked }));
     } else {
+      // If the input is a text input, set the value directly
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
+  // Function to handle adding a new tag
   const handleAddTag = () => {
+    // Check if the new tag is not empty and does not already exist in the tags array
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       setTags((prev) => [...prev, newTag.trim()]);
       setNewTag('');
     }
   };
 
+  // Function to handle removing a tag
   const handleRemoveTag = (tagToRemove: string) => {
+    // Filter out the tag to remove from the tags array
     setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
+  // Function to validate the form data
   const validateForm = () => {
+    // Initialize an empty errors object
     const newErrors: Record<string, string> = {};
     let isValid = true;
 
+    // Check if title field is valid
     if (!formData.title) {
-      newErrors.title = '제목을 입력해주세요';
+      newErrors.title = '⚠️ Title is required';
+
       isValid = false;
     }
 
+    // Check if description field is valid
     if (!formData.description) {
-      newErrors.description = '설명을 입력해주세요';
+      newErrors.description = '⚠️ Description is required';
+
       isValid = false;
     }
 
+    // Check if date field is valid
     if (!formData.date) {
-      newErrors.date = '날짜를 입력해주세요';
+      newErrors.date = '⚠️ Date is required';
+
       isValid = false;
     }
 
+    // Check if Location field is valid
     if (!formData.location) {
-      newErrors.location = '위치를 입력해주세요';
+      newErrors.location = '⚠️ Location is required';
+
       isValid = false;
     }
 
+    // Check if topic field is valid
     if (!formData.topic) {
-      newErrors.topic = '주제를 입력해주세요';
+      newErrors.topic = '⚠️ Topic is required';
+
       isValid = false;
     }
 
+    // Check if URL field is valid
     if (formData.is_online && !formData.online_link) {
-      newErrors.online_link = '온라인 링크를 입력해주세요';
+      newErrors.online_link = '⚠️ URL is required';
+
       isValid = false;
     }
 
     setErrors(newErrors);
+
     return isValid;
   };
 
+  // Function to handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
+    // Prevent default form submission
     e.preventDefault();
     setSubmitError(null);
 
+    // Validate the form data
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
+      // Create the event using the API
       const response = await createEvent({
         ...formData,
         tags,
       });
 
+      // Redirect to the event details page
       router.push(`/events/${response.event?.id}`);
     } catch (error) {
-      console.error('이벤트 생성 오류:', error);
+      // Handle error
+      console.error('⚠️ Error while creating an event:', error);
       setSubmitError(
         error instanceof Error
           ? error.message
-          : '이벤트 생성 중 오류가 발생했습니다.'
+          : '⚠️ Error while creating an event'
       );
     } finally {
       setIsSubmitting(false);
@@ -159,12 +202,12 @@ export default function CreateEventPage() {
         className="flex items-center text-blue-600 hover:underline mb-6"
       >
         <ArrowLeft size={16} className="mr-1" />
-        이벤트 목록으로 돌아가기
+        Back to Events
       </Link>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">새 이벤트 생성</CardTitle>
+          <CardTitle className="text-2xl">Creaet a new event</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -179,8 +222,8 @@ export default function CreateEventPage() {
               <Input
                 id="title"
                 name="title"
-                label="제목"
-                placeholder="이벤트 제목"
+                label="Title"
+                placeholder="Title"
                 value={formData.title}
                 onChange={handleChange}
                 error={errors.title}
@@ -190,8 +233,8 @@ export default function CreateEventPage() {
               <Input
                 id="topic"
                 name="topic"
-                label="주제"
-                placeholder="이벤트 주제 (예: 웹 개발, 데이터 사이언스)"
+                label="Topic"
+                placeholder="Topic"
                 value={formData.topic}
                 onChange={handleChange}
                 error={errors.topic}
@@ -204,13 +247,13 @@ export default function CreateEventPage() {
                 htmlFor="description"
                 className="block text-sm font-medium text-gray-700"
               >
-                설명
+                Description
               </label>
               <textarea
                 id="description"
                 name="description"
                 rows={5}
-                placeholder="이벤트에 대한 설명을 입력해주세요"
+                placeholder="Description"
                 className={`w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${
                   errors.description ? 'border-red-500 focus:ring-red-500' : ''
                 }`}
@@ -230,7 +273,7 @@ export default function CreateEventPage() {
                 id="date"
                 name="date"
                 type="datetime-local"
-                label="시작 날짜 및 시간"
+                label="Start Date"
                 value={formData.date}
                 onChange={handleChange}
                 error={errors.date}
@@ -240,7 +283,7 @@ export default function CreateEventPage() {
                 id="end_date"
                 name="end_date"
                 type="datetime-local"
-                label="종료 날짜 및 시간 (선택사항)"
+                label="End Date"
                 value={formData.end_date}
                 onChange={handleChange}
                 disabled={isSubmitting}
@@ -251,8 +294,8 @@ export default function CreateEventPage() {
               <Input
                 id="location"
                 name="location"
-                label="위치"
-                placeholder="이벤트 장소"
+                label="Location"
+                placeholder="Seoul, South Korea"
                 value={formData.location}
                 onChange={handleChange}
                 error={errors.location}
@@ -263,8 +306,8 @@ export default function CreateEventPage() {
                 id="max_attendees"
                 name="max_attendees"
                 type="number"
-                label="최대 참가자 수 (0은 제한 없음)"
-                placeholder="최대 참가자 수"
+                label="Max Attendees"
+                placeholder="Max Attendees (0 for unlimited)"
                 value={formData.max_attendees.toString()}
                 onChange={handleChange}
                 disabled={isSubmitting}
@@ -291,7 +334,7 @@ export default function CreateEventPage() {
                   htmlFor="is_online"
                   className="text-sm font-medium text-gray-700"
                 >
-                  온라인 이벤트
+                  Virtual Event
                 </label>
               </div>
 
@@ -299,8 +342,8 @@ export default function CreateEventPage() {
                 <Input
                   id="online_link"
                   name="online_link"
-                  label="온라인 링크"
-                  placeholder="이벤트 참가 링크 (Zoom, Google Meet 등)"
+                  label="URL"
+                  placeholder="https://example.com"
                   value={formData.online_link}
                   onChange={handleChange}
                   error={errors.online_link}
@@ -311,7 +354,7 @@ export default function CreateEventPage() {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                태그
+                Tags
               </label>
 
               <div className="flex flex-wrap gap-2 mb-2">
@@ -366,12 +409,10 @@ export default function CreateEventPage() {
             <div className="flex justify-end space-x-3">
               <Link href="/events">
                 <Button type="button" variant="outline" disabled={isSubmitting}>
-                  취소
+                  Cancel
                 </Button>
               </Link>
-              <Button type="submit" isLoading={isSubmitting}>
-                이벤트 생성
-              </Button>
+              <Button type="submit">Create</Button>
             </div>
           </form>
         </CardContent>

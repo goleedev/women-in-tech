@@ -1,9 +1,11 @@
-// app/lib/api/auth.ts
 'use client';
 
 import { fetchAPI } from './client';
 import { User } from './types';
 
+type UserRole = 'mentor' | 'mentee';
+
+// Define the types for register data
 export interface RegisterData {
   email: string;
   name: string;
@@ -12,26 +14,30 @@ export interface RegisterData {
   profession?: string;
   seniority_level?: string;
   country?: string;
-  role: 'mentor' | 'mentee';
+  role: UserRole;
+  secondary_role: UserRole | '';
   bio?: string;
 }
 
+// Define the types for login credentails data
 export interface LoginCredentials {
   email: string;
   password: string;
 }
 
+// Define the types for the auth response from the API
 export interface AuthResponse {
   success: boolean;
   message: string;
   user: User;
 }
 
+// Define the types for the login response from the API
 export interface LoginResponse extends AuthResponse {
   token: string;
 }
 
-// 인증 관련 API 함수들
+// Create register function
 export const register = async (
   userData: RegisterData
 ): Promise<AuthResponse> => {
@@ -41,6 +47,7 @@ export const register = async (
   });
 };
 
+// Create login function
 export const login = async (
   credentials: LoginCredentials
 ): Promise<LoginResponse> => {
@@ -49,13 +56,14 @@ export const login = async (
     body: JSON.stringify(credentials),
   });
 
-  // 토큰과 사용자 정보 저장
+  // Store the token and user information in local storage
   localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
 
   return data;
 };
 
+// Create logout function
 export const logout = async (): Promise<{
   success: boolean;
   message: string;
@@ -67,25 +75,31 @@ export const logout = async (): Promise<{
     }
   );
 
-  // 로컬 스토리지에서 토큰과 사용자 정보 삭제
+  // Remove the token and user information from local storage
   localStorage.removeItem('token');
   localStorage.removeItem('user');
 
   return result;
 };
 
+// Create a function to get the current user from api
 export const getMe = async (): Promise<User> => {
   return await fetchAPI<User>('/auth/me');
 };
 
+// Create a function to get the current user from local storage
 export const getCurrentUser = (): User | null => {
   if (typeof window === 'undefined') return null;
 
+  // Check if local storage for user is available
   const userStr = localStorage.getItem('user');
+
   return userStr ? (JSON.parse(userStr) as User) : null;
 };
 
+// Create a function to check if the user is authenticated
 export const isAuthenticated = (): boolean => {
   if (typeof window === 'undefined') return false;
+
   return !!localStorage.getItem('token');
 };

@@ -1,20 +1,16 @@
-// app/lib/api/index.ts
 'use client';
 
-// 각 API 모듈 내보내기
 import * as authApi from './auth';
-import * as userApi from './user';
+import * as chatApi from './chat';
 import * as eventApi from './event';
 import * as mentorshipApi from './mentorship';
-import * as chatApi from './chat';
 import * as notificationApi from './notification';
-import * as tagApi from './tag';
 import { socketService } from './socket';
-
-// 타입 내보내기
+import * as tagApi from './tag';
+import * as userApi from './user';
 export * from './types';
 
-// 통합 API 객체 생성
+// Set up the API object to group all the API modules
 const api = {
   auth: authApi,
   user: userApi,
@@ -26,16 +22,17 @@ const api = {
   socket: socketService,
 };
 
+// Export the API object as default
 export default api;
 
-// 개별 내보내기
+// Export individual API modules for convenience
 export {
   authApi,
-  userApi,
+  chatApi,
   eventApi,
   mentorshipApi,
-  chatApi,
   notificationApi,
-  tagApi,
   socketService,
+  tagApi,
+  userApi,
 };

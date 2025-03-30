@@ -3,6 +3,7 @@
 import { fetchAPI } from './client';
 import { MentorshipConnection, Pagination, User } from './types';
 
+// Define the types for mentorship parameters
 export interface MentorshipParams {
   role?: 'mentor' | 'mentee';
   expertise?: string;
@@ -11,9 +12,10 @@ export interface MentorshipParams {
   search?: string;
   page?: number;
   limit?: number;
-  mode?: string; // 활성 역할 모드 추가
+  mode?: string;
 }
 
+// Define the types for mentorship user data
 export interface MentorshipUserWithMetadata extends User {
   tags: string[];
   similarity_score?: number;
@@ -21,21 +23,26 @@ export interface MentorshipUserWithMetadata extends User {
   connection_status?: 'pending' | 'accepted' | 'rejected';
 }
 
+// Define the types for mentorship user data
 export interface UsersResponse {
   users: MentorshipUserWithMetadata[];
   pagination: Pagination;
 }
 
+// Define the types for mentorship connection data
 export interface ConnectionsResponse {
   connections: MentorshipConnection[];
   pagination: Pagination;
 }
 
+// Create a function to fetch mentorship users
 export const getUsers = async (
   params?: MentorshipParams
 ): Promise<UsersResponse> => {
+  // Get the query parameters
   const queryParams = new URLSearchParams();
 
+  // Append the parameters to the query string
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -44,19 +51,22 @@ export const getUsers = async (
     });
   }
 
+  // Construct the URL with query parameters
   const queryString = queryParams.toString()
     ? `?${queryParams.toString()}`
     : '';
 
   try {
-    console.log('API 요청 URL:', `/mentorship/users${queryString}`); // 디버깅용 로그 추가
     return await fetchAPI<UsersResponse>(`/mentorship/users${queryString}`);
   } catch (error) {
-    console.error('멘토십 사용자 조회 API 오류:', error);
-    throw error; // 에러 다시 던지기
+    // Handle the error
+    console.error('⚠️ Error fetching mentorship users:', error);
+
+    throw error;
   }
 };
 
+// Create a function to connect with a mentor
 export const connectRequest = async (
   mentorId: number | string,
   message: string
@@ -75,6 +85,7 @@ export const connectRequest = async (
   });
 };
 
+// Create a function to update the connection status
 export const updateConnectionStatus = async (
   connectionId: number | string,
   status: 'accepted' | 'rejected'
@@ -88,13 +99,16 @@ export const updateConnectionStatus = async (
   );
 };
 
+// Create a function to get connection requests
 export const getConnectionRequests = async (params?: {
   status?: 'pending' | 'accepted' | 'rejected';
   page?: number;
   limit?: number;
 }): Promise<ConnectionsResponse> => {
+  // Get the query parameters
   const queryParams = new URLSearchParams();
 
+  // Append the parameters to the query string
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -103,20 +117,26 @@ export const getConnectionRequests = async (params?: {
     });
   }
 
+  // Construct the URL with query parameters
   const queryString = queryParams.toString()
     ? `?${queryParams.toString()}`
     : '';
+
+  // Fetch connection requests
   return await fetchAPI<ConnectionsResponse>(
     `/mentorship/connect/requests${queryString}`
   );
 };
 
+// Create a function to get my connections
 export const getMyConnections = async (params?: {
   page?: number;
   limit?: number;
 }): Promise<ConnectionsResponse> => {
+  // Get the query parameters
   const queryParams = new URLSearchParams();
 
+  // Append the parameters to the query string
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -125,14 +145,18 @@ export const getMyConnections = async (params?: {
     });
   }
 
+  // Construct the URL with query parameters
   const queryString = queryParams.toString()
     ? `?${queryParams.toString()}`
     : '';
+
+  // Fetch my connections
   return await fetchAPI<ConnectionsResponse>(
     `/mentorship/connect${queryString}`
   );
 };
 
+// Create a function to get recommended mentors
 export const getRecommendedMentors = async (): Promise<{
   recommended_mentors: Array<User & { similarity_score: number }>;
 }> => {

@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Calendar, MapPin, Users, Heart, Globe, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+
 import { useAuth } from '@/app/context/AuthContext';
+
 import {
   getEventById,
   cancelEventAttendance,
@@ -11,15 +14,21 @@ import {
   unlikeEvent,
 } from '@/app/lib/api/event';
 import { Event } from '@/app/lib/api/types';
-import { Card, CardContent } from '@/app/ui/Card';
-import Button from '@/app/ui/Button';
+
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
 import { formatDate } from '@/app/lib/utils';
-import { Calendar, MapPin, Users, Heart, Globe, ArrowLeft } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 export default function EventDetailPage() {
+  // Get the event ID from the URL parameters
   const { id } = useParams();
+  // Get the router
   const router = useRouter();
+  // Get the authentication context
   const { isAuthenticated, user } = useAuth();
+  // State variables for event details
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +36,7 @@ export default function EventDetailPage() {
   const [likeActionInProgress, setLikeActionInProgress] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
 
+  // Fetch event details when the component mounts or when the ID changes
   useEffect(() => {
     const fetchEventDetail = async () => {
       setLoading(true);
@@ -62,19 +72,20 @@ export default function EventDetailPage() {
     }
   }, [id, isAuthenticated, user]);
 
-  // 이벤트 참가 신청/취소
+  // Function to handle attendance action
   const handleAttendance = async () => {
+    // Check if the user is authenticated
     if (!isAuthenticated) {
       router.push(`/login?redirect=/events/${id}`);
       return;
     }
 
-    setAttendActionInProgress(true); // 참가 버튼만 로딩 상태로 변경
+    setAttendActionInProgress(true);
     try {
       if (isAttending) {
+        // Cancel attendance
         await cancelEventAttendance(id as string);
         setIsAttending(false);
-        // 참가자 수 업데이트
         if (event) {
           setEvent({
             ...event,
@@ -86,7 +97,6 @@ export default function EventDetailPage() {
         }
       } else {
         setIsAttending(true);
-        // 참가자 수 업데이트
         if (event && user) {
           setEvent({
             ...event,
@@ -99,49 +109,56 @@ export default function EventDetailPage() {
         }
       }
     } catch (err) {
-      console.error('이벤트 참가 처리 오류:', err);
+      // Handle error
+      console.error('⚠️ Failed to attend the event:', err);
     } finally {
-      setAttendActionInProgress(false); // 참가 버튼 로딩 상태 해제
+      setAttendActionInProgress(false);
     }
   };
 
-  // 좋아요 토글
+  // Function to handle like/unlike action
   const handleLikeToggle = async () => {
+    // Check if the user is authenticated
     if (!isAuthenticated || !event) {
       router.push(`/login?redirect=/events/${id}`);
       return;
     }
 
-    setLikeActionInProgress(true); // 좋아요 버튼만 로딩 상태로 변경
+    setLikeActionInProgress(true);
     try {
+      // Toggle like status
       if (event.is_liked) {
         await unlikeEvent(id as string);
       } else {
         await likeEvent(id as string);
       }
-      // 좋아요 상태 업데이트
+
+      // Update the event state
       setEvent({
         ...event,
         is_liked: !event.is_liked,
       });
     } catch (err) {
-      console.error('좋아요 처리 오류:', err);
+      // Handle error
+      console.error('⚠️ Failed to update like status:', err);
     } finally {
-      setLikeActionInProgress(false); // 좋아요 버튼 로딩 상태 해제
+      setLikeActionInProgress(false);
     }
   };
 
-  // 이벤트 시작 전인지 확인
+  // Function to check if the event is upcoming
   const isEventUpcoming = () => {
     if (!event) return false;
     const eventDate = new Date(event.date);
+
+    // Return true if the event date is in the future
     return eventDate > new Date();
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 flex justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto my-auto min-h-screen px-4 py-20 flex justify-center">
+        <LoadingSpinner />
       </div>
     );
   }
@@ -150,11 +167,11 @@ export default function EventDetailPage() {
     return (
       <div className="container mx-auto px-4 py-12">
         <div className="bg-red-50 text-red-600 p-4 rounded-md text-center">
-          {error || '이벤트를 찾을 수 없습니다.'}
+          {error || 'Event not found'}
         </div>
         <div className="text-center mt-4">
           <Link href="/events">
-            <Button variant="outline">이벤트 목록으로 돌아가기</Button>
+            <Button variant="outline">Back to Events</Button>
           </Link>
         </div>
       </div>
@@ -168,7 +185,7 @@ export default function EventDetailPage() {
         className="flex items-center text-blue-600 hover:underline mb-6"
       >
         <ArrowLeft size={16} className="mr-1" />
-        이벤트 목록으로 돌아가기
+        Back to Events
       </Link>
 
       <Card>
@@ -183,7 +200,7 @@ export default function EventDetailPage() {
                 {event.is_online && (
                   <span className="inline-flex items-center bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
                     <Globe size={12} className="mr-1" />
-                    온라인
+                    Virtual
                   </span>
                 )}
               </div>
@@ -191,7 +208,7 @@ export default function EventDetailPage() {
               <h1 className="text-3xl font-bold mb-2">{event.title}</h1>
 
               <p className="text-gray-500 mb-1">
-                {event.organizer && `주최자: ${event.organizer.name}`}
+                {event.organizer && `Host: ${event.organizer.name}`}
               </p>
             </div>
 
@@ -200,14 +217,13 @@ export default function EventDetailPage() {
                 <Button
                   onClick={handleAttendance}
                   disabled={
-                    attendActionInProgress || // 참가 버튼 로딩 상태 확인
+                    attendActionInProgress ||
                     (event.max_attendees > 0 &&
                       event.current_attendees >= event.max_attendees &&
                       !isAttending)
                   }
-                  isLoading={attendActionInProgress} // 참가 버튼 로딩 상태 연결
                 >
-                  {isAttending ? '참가 취소' : '참가하기'}
+                  {isAttending ? 'Cancel' : 'Attend'}
                 </Button>
               )}
 
@@ -215,21 +231,19 @@ export default function EventDetailPage() {
                 variant="outline"
                 onClick={handleLikeToggle}
                 disabled={likeActionInProgress}
-                isLoading={likeActionInProgress}
                 className={
                   event.is_liked
                     ? 'border-red-500 text-red-500 hover:bg-red-50'
                     : ''
                 }
               >
-                {/* 하트 아이콘 색상과 채우기를 더 명확하게 설정 */}
                 <Heart
                   size={16}
                   className={`mr-1 ${event.is_liked ? 'text-red-500' : ''}`}
                   fill={event.is_liked ? 'currentColor' : 'none'}
                   stroke={event.is_liked ? 'currentColor' : 'currentColor'}
                 />
-                {event.is_liked ? '좋아요 취소' : '좋아요'}
+                {event.is_liked ? 'Unlike' : 'Like'}
               </Button>
             </div>
           </div>
@@ -237,15 +251,13 @@ export default function EventDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div className="md:col-span-2">
               <div className="prose max-w-none">
-                <h2 className="text-xl font-semibold mb-3">이벤트 상세 정보</h2>
+                <h2 className="text-xl font-semibold mb-3">Event Details</h2>
                 <div className="whitespace-pre-line">{event.description}</div>
               </div>
 
               {event.is_online && event.online_link && isAttending && (
                 <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                  <h3 className="font-semibold mb-2">
-                    온라인 이벤트 참가 링크
-                  </h3>
+                  <h3 className="font-semibold mb-2">URL</h3>
                   <a
                     href={event.online_link}
                     target="_blank"
@@ -260,17 +272,17 @@ export default function EventDetailPage() {
 
             <div>
               <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <h3 className="font-semibold mb-3">이벤트 정보</h3>
+                <h3 className="font-semibold mb-3">Event Info</h3>
 
                 <div className="space-y-3">
                   <div className="flex items-start">
                     <Calendar size={18} className="mt-1 mr-2 text-gray-500" />
                     <div>
-                      <p className="font-medium">날짜 및 시간</p>
+                      <p className="font-medium">Date & Time</p>
                       <p className="text-gray-600">{formatDate(event.date)}</p>
                       {event.end_date && (
                         <p className="text-gray-600">
-                          종료: {formatDate(event.end_date)}
+                          End: {formatDate(event.end_date)}
                         </p>
                       )}
                     </div>
@@ -279,7 +291,7 @@ export default function EventDetailPage() {
                   <div className="flex items-start">
                     <MapPin size={18} className="mt-1 mr-2 text-gray-500" />
                     <div>
-                      <p className="font-medium">위치</p>
+                      <p className="font-medium">Location</p>
                       <p className="text-gray-600">{event.location}</p>
                     </div>
                   </div>
@@ -287,12 +299,12 @@ export default function EventDetailPage() {
                   <div className="flex items-start">
                     <Users size={18} className="mt-1 mr-2 text-gray-500" />
                     <div>
-                      <p className="font-medium">참가자</p>
+                      <p className="font-medium">Attendees</p>
                       <p className="text-gray-600">
                         {event.current_attendees} /{' '}
                         {event.max_attendees > 0
                           ? event.max_attendees
-                          : '제한 없음'}
+                          : 'Unlimited'}
                       </p>
                     </div>
                   </div>
@@ -301,7 +313,7 @@ export default function EventDetailPage() {
 
               {event.tags && event.tags.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-semibold mb-3">태그</h3>
+                  <h3 className="font-semibold mb-3">Tags</h3>
                   <div className="flex flex-wrap gap-2">
                     {event.tags.map((tag, index) => (
                       <span
@@ -320,7 +332,7 @@ export default function EventDetailPage() {
           {event.attendees && event.attendees.length > 0 && (
             <div>
               <h3 className="text-xl font-semibold mb-3">
-                참가자 ({event.attendees.length}명)
+                Attendees ({event.attendees.length})
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 {event.attendees.map((attendee) => (

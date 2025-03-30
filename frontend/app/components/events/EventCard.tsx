@@ -2,32 +2,38 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { Calendar, MapPin, Heart, Users } from 'lucide-react';
+
 import { Event } from '@/app/lib/api/types';
 import { likeEvent, unlikeEvent } from '@/app/lib/api/event';
-import { Calendar, MapPin, Heart, Users } from 'lucide-react';
+
 import { formatDate, truncate } from '@/app/lib/utils';
 
+// Define the EventCard interface
 interface EventCardProps {
   event: Event;
   onLikeToggle?: (eventId: number, newStatus: boolean) => void;
 }
 
 export default function EventCard({ event, onLikeToggle }: EventCardProps) {
-  // 초기 상태를 event.is_liked로 설정하여 이미 좋아요한 이벤트의 경우 하트가 채워지도록 함
+  // State variables to manage the like status and loading state
   const [isLiked, setIsLiked] = useState(event.is_liked || false);
   const [likeInProgress, setLikeInProgress] = useState(false);
 
-  // 추가: 이벤트 props가 변경될 때 isLiked 상태 업데이트
+  // Effect to set the initial like status based on the event prop
   useEffect(() => {
     setIsLiked(event.is_liked || false);
   }, [event.is_liked]);
 
+  // Function to handle the like/unlike action
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
+    // Prevent multiple clicks during the like/unlike process
     if (likeInProgress) return;
 
+    // Toggle the like status
     setLikeInProgress(true);
     try {
       if (isLiked) {
@@ -39,12 +45,11 @@ export default function EventCard({ event, onLikeToggle }: EventCardProps) {
       const newStatus = !isLiked;
       setIsLiked(newStatus);
 
-      // 부모 컴포넌트에 변경 알림
       if (onLikeToggle) {
         onLikeToggle(event.id, newStatus);
       }
     } catch (err) {
-      console.error('좋아요 처리 오류:', err);
+      console.error('⚠️ Error updating the event status:', err);
     } finally {
       setLikeInProgress(false);
     }
@@ -64,7 +69,7 @@ export default function EventCard({ event, onLikeToggle }: EventCardProps) {
               className={`text-gray-400 hover:text-red-500 focus:outline-none transition-colors duration-200 ${
                 isLiked ? 'text-red-500' : ''
               }`}
-              aria-label={isLiked ? '좋아요 취소' : '좋아요'}
+              aria-label={isLiked ? 'Unlike' : 'Like'}
             >
               <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
             </button>
@@ -97,21 +102,7 @@ export default function EventCard({ event, onLikeToggle }: EventCardProps) {
 
           <div className="mt-auto flex justify-end">
             <span className="text-blue-600 inline-flex items-center text-sm">
-              자세히 보기
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 ml-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              View Details
             </span>
           </div>
         </div>

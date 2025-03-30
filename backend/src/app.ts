@@ -4,13 +4,13 @@ import cors from 'cors';
 import morgan from 'morgan';
 
 // Routes
-import authRoutes from './routes/authRoutes';
-import userRoutes from './routes/userRoutes';
-import eventRoutes from './routes/eventRoutes';
-import mentorshipRoutes from './routes/mentorshipRoutes';
-import chatRoutes from './routes/chatRoutes';
-import notificationRoutes from './routes/notificationRoutes';
-import tagRoutes from './routes/tagRoutes';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/user';
+import eventRoutes from './routes/event';
+import mentorshipRoutes from './routes/mentorship';
+import chatRoutes from './routes/chat';
+import notificationRoutes from './routes/notification';
+import tagRoutes from './routes/tag';
 
 // Set up the env variables
 config();

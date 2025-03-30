@@ -2,17 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/app/context/AuthContext';
-import { getEvents, getLikedEvents } from '@/app/lib/api/event';
-import {
-  getMyConnections,
-  getRecommendedMentors,
-} from '@/app/lib/api/mentorship';
-import { getNotifications } from '@/app/lib/api/notification';
-import { getChatRooms } from '@/app/lib/api/chat';
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/ui/Card';
-import Button from '@/app/ui/Button';
-import { formatDate, truncate } from '@/app/lib/utils';
 import {
   Calendar,
   Users,
@@ -21,10 +10,27 @@ import {
   Heart,
   ChevronRight,
 } from 'lucide-react';
-import Image from 'next/image';
+
+import { getEvents, getLikedEvents } from '@/app/lib/api/event';
+import {
+  getMyConnections,
+  getRecommendedMentors,
+} from '@/app/lib/api/mentorship';
+import { getNotifications } from '@/app/lib/api/notification';
+import { getChatRooms } from '@/app/lib/api/chat';
+
+import { useAuth } from '@/app/context/AuthContext';
+
+import { formatDate, truncate } from '@/app/lib/utils';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 export default function DashboardPage() {
+  // Context for authentication
   const { user } = useAuth();
+  // State variables for dashboard data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,88 +39,99 @@ export default function DashboardPage() {
   const [mentorshipConnections, setMentorshipConnections] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [recommendedMentors, setRecommendedMentors] = useState<any[]>([]);
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
 
-        // 이벤트 데이터 가져오기
+        // Get events limit by 3
         const eventsResponse = await getEvents({ limit: 3 });
+        // Set upcoming events
         setUpcomingEvents(eventsResponse.events);
 
-        // 좋아요한 이벤트 가져오기
+        // Get liked events limit by 3
         const likedEventsResponse = await getLikedEvents({ limit: 3 });
+        // Set liked events
         setLikedEvents(likedEventsResponse.events);
 
-        // 멘토십 연결 가져오기
+        // Get mentorship connections limit by 3
         const connectionsResponse = await getMyConnections({ limit: 3 });
+        // Set mentorship connections
         setMentorshipConnections(connectionsResponse.connections);
 
-        // 멘티인 경우 추천 멘토 가져오기
+        // Get recommended mentors if user is a mentee
         if (user?.role === 'mentee') {
           try {
+            // Fetch recommended mentors
             const mentorsResponse = await getRecommendedMentors();
+
+            // Set recommended mentors limit by 3
             setRecommendedMentors(
               mentorsResponse.recommended_mentors.slice(0, 3)
             );
           } catch (error) {
-            console.error('추천 멘토 가져오기 오류:', error);
+            console.error(
+              '⚠️ Error while fetching recommended mentors:',
+              error
+            );
           }
         }
 
-        // 읽지 않은 메시지 수 가져오기
+        // Get unread messages count
         const chatRoomsResponse = await getChatRooms();
+
+        // Calculate total unread messages
         const totalUnread = chatRoomsResponse.chat_rooms.reduce(
           (sum, room) => sum + room.unread_count,
           0
         );
+        // Set unread messages count
         setUnreadMessages(totalUnread);
 
-        // 읽지 않은 알림 수 가져오기
+        // Get unread notifications count
         const notificationsResponse = await getNotifications();
+        // Set unread notifications count
         setUnreadNotifications(notificationsResponse.unread_count);
       } catch (error) {
-        console.error('대시보드 데이터 가져오기 오류:', error);
+        console.error('⚠️ Error while fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
 
+    // Fetch dashboard data when the component mounts
     fetchDashboardData();
   }, [user]);
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 flex justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto my-auto px-4 py-20 flex justify-center min-h-screen">
+        <LoadingSpinner />
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">대시보드</h1>
-      <p className="text-gray-500 mb-8">안녕하세요, {user?.name}님!</p>
+      <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+      <p className="text-gray-500 mb-8">Hey, {user?.name}!</p>
 
-      {/* 요약 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardContent className="p-6 flex flex-col h-full">
             <div className="flex items-center mb-4">
-              <Calendar className="text-blue-600 mr-2" size={24} />
-              <h3 className="text-lg font-medium">이벤트</h3>
+              <Calendar className="text-blue-300 mr-2" size={24} />
+              <h3 className="text-lg font-medium">Event</h3>
             </div>
             <p className="text-3xl font-bold mb-2">{upcomingEvents.length}</p>
-            <p className="text-gray-500 text-sm mb-4">다가오는 이벤트</p>
+            <p className="text-gray-500 text-sm mb-4">Upcoming Event</p>
             <div className="mt-auto">
               <Link href="/events">
-                <Button variant="outline" fullWidth>
-                  이벤트 보기
-                </Button>
+                <Button className="w-full">View Event</Button>
               </Link>
             </div>
           </CardContent>
@@ -123,17 +140,17 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6 flex flex-col h-full">
             <div className="flex items-center mb-4">
-              <Users className="text-green-600 mr-2" size={24} />
-              <h3 className="text-lg font-medium">멘토십</h3>
+              <Users className="text-blue-400 mr-2" size={24} />
+              <h3 className="text-lg font-medium">Mentorship</h3>
             </div>
             <p className="text-3xl font-bold mb-2">
               {mentorshipConnections.length}
             </p>
-            <p className="text-gray-500 text-sm mb-4">활성 연결</p>
+            <p className="text-gray-500 text-sm mb-4">Active Connections</p>
             <div className="mt-auto">
               <Link href="/mentorship">
-                <Button variant="outline" fullWidth>
-                  {user?.role === 'mentor' ? '멘티 찾기' : '멘토 찾기'}
+                <Button className="w-full">
+                  {user?.role === 'mentor' ? 'Find Mentee' : 'Find Mentor'}
                 </Button>
               </Link>
             </div>
@@ -143,16 +160,14 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6 flex flex-col h-full">
             <div className="flex items-center mb-4">
-              <MessageSquare className="text-purple-600 mr-2" size={24} />
-              <h3 className="text-lg font-medium">메시지</h3>
+              <MessageSquare className="text-blue-500 mr-2" size={24} />
+              <h3 className="text-lg font-medium">Messages</h3>
             </div>
             <p className="text-3xl font-bold mb-2">{unreadMessages}</p>
-            <p className="text-gray-500 text-sm mb-4">읽지 않은 메시지</p>
+            <p className="text-gray-500 text-sm mb-4">Unread Messages</p>
             <div className="mt-auto">
               <Link href="/chat">
-                <Button variant="outline" fullWidth>
-                  채팅 보기
-                </Button>
+                <Button className="w-full">View Chat</Button>
               </Link>
             </div>
           </CardContent>
@@ -161,29 +176,25 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6 flex flex-col h-full">
             <div className="flex items-center mb-4">
-              <Bell className="text-orange-600 mr-2" size={24} />
-              <h3 className="text-lg font-medium">알림</h3>
+              <Bell className="text-blue-600 mr-2" size={24} />
+              <h3 className="text-lg font-medium">Notification</h3>
             </div>
             <p className="text-3xl font-bold mb-2">{unreadNotifications}</p>
-            <p className="text-gray-500 text-sm mb-4">읽지 않은 알림</p>
+            <p className="text-gray-500 text-sm mb-4">Unread Notifications</p>
             <div className="mt-auto">
               <Link href="/notifications">
-                <Button variant="outline" fullWidth>
-                  알림 보기
-                </Button>
+                <Button className="w-full">View Notification</Button>
               </Link>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* 컨텐츠 영역 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 다가오는 이벤트 */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex justify-between items-center">
-              <span>다가오는 이벤트</span>
+              <span>Upcoming Events</span>
               <Link href="/events">
                 <ChevronRight className="text-gray-500" size={20} />
               </Link>
@@ -191,7 +202,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {upcomingEvents.length === 0 ? (
-              <p className="text-gray-500 py-2">다가오는 이벤트가 없습니다.</p>
+              <p className="text-gray-500 py-2">No Upcoming Events</p>
             ) : (
               <div className="divide-y">
                 {upcomingEvents.map((event) => (
@@ -204,10 +215,10 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-600 line-clamp-1">
                       {truncate(event.description, 100)}
                     </p>
-                    <div className="mt-2">
-                      <Link href={`/events/${event.id}`}>
-                        <span className="text-blue-600 hover:underline text-sm">
-                          자세히 보기
+                    <div className="mt-2 flex justify-end">
+                      <Link href={`/events/${event.id}`} className="text-right">
+                        <span className="text-blue-600 hover:underline  text-sm">
+                          View Details
                         </span>
                       </Link>
                     </div>
@@ -218,11 +229,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* 좋아요한 이벤트 */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex justify-between items-center">
-              <span>좋아요한 이벤트</span>
+              <span>Liked Events</span>
               <Link href="/events/liked">
                 <ChevronRight className="text-gray-500" size={20} />
               </Link>
@@ -230,7 +240,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {likedEvents.length === 0 ? (
-              <p className="text-gray-500 py-2">좋아요한 이벤트가 없습니다.</p>
+              <p className="text-gray-500 py-2">No Liked Events</p>
             ) : (
               <div className="divide-y">
                 {likedEvents.map((event) => (
@@ -249,10 +259,10 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2 flex justify-end">
                       <Link href={`/events/${event.id}`}>
                         <span className="text-blue-600 hover:underline text-sm">
-                          자세히 보기
+                          View Details
                         </span>
                       </Link>
                     </div>
@@ -263,11 +273,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* 멘토십 연결 */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex justify-between items-center">
-              <span>멘토십 연결</span>
+              <span>Mentorship Connections</span>
               <Link href="/mentorship/connections">
                 <ChevronRight className="text-gray-500" size={20} />
               </Link>
@@ -275,9 +284,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {mentorshipConnections.length === 0 ? (
-              <p className="text-gray-500 py-2">
-                활성화된 멘토십 연결이 없습니다.
-              </p>
+              <p className="text-gray-500 py-2">No Mentorship Connections</p>
             ) : (
               <div className="divide-y">
                 {mentorshipConnections.map((connection) => {
@@ -291,7 +298,8 @@ export default function DashboardPage() {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium mb-1">
-                            {isUserMentor ? '멘티' : '멘토'}: {otherPerson.name}
+                            {isUserMentor ? 'Mentee' : 'Mentor'}:{' '}
+                            {otherPerson.name}
                           </p>
                           <p className="text-sm text-gray-500">
                             {otherPerson.expertise}
@@ -300,9 +308,9 @@ export default function DashboardPage() {
 
                         {connection.chat_room_id && (
                           <Link href={`/chat/${connection.chat_room_id}`}>
-                            <Button variant="outline" size="sm">
+                            <Button size="sm">
                               <MessageSquare size={14} className="mr-1" />
-                              채팅
+                              Chat
                             </Button>
                           </Link>
                         )}
@@ -315,12 +323,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* 추천 멘토 (멘티인 경우만) */}
         {user?.role === 'mentee' && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center">
-                <span>추천 멘토</span>
+                <span>Recommended Mentors</span>
                 <Link href="/mentorship">
                   <ChevronRight className="text-gray-500" size={20} />
                 </Link>
@@ -328,7 +335,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {recommendedMentors.length === 0 ? (
-                <p className="text-gray-500 py-2">추천 멘토가 없습니다.</p>
+                <p className="text-gray-500 py-2">No Recommended Mentors</p>
               ) : (
                 <div className="divide-y">
                   {recommendedMentors.map((mentor) => (
@@ -336,20 +343,9 @@ export default function DashboardPage() {
                       <div className="flex justify-between items-start">
                         <div className="flex items-start">
                           <div className="w-10 h-10 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mr-3">
-                            {mentor.profile_image_url ? (
-                              <Image
-                                unoptimized
-                                width={40}
-                                height={40}
-                                src={mentor.profile_image_url}
-                                alt={mentor.name}
-                                className="w-full h-full rounded-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-blue-600 font-medium">
-                                {mentor.name.charAt(0)}
-                              </span>
-                            )}
+                            <span className="text-blue-600 font-medium">
+                              {mentor.name.charAt(0)}
+                            </span>
                           </div>
                           <div>
                             <p className="font-medium mb-1">{mentor.name}</p>
@@ -360,9 +356,7 @@ export default function DashboardPage() {
                         </div>
 
                         <Link href={`/mentorship/users/${mentor.id}`}>
-                          <Button variant="outline" size="sm">
-                            프로필
-                          </Button>
+                          <Button size="sm">View Profile</Button>
                         </Link>
                       </div>
                     </div>

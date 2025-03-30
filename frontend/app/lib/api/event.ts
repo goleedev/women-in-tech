@@ -1,9 +1,9 @@
-// app/lib/api/event.ts
 'use client';
 
 import { fetchAPI } from './client';
 import { Event, Pagination } from './types';
 
+// Define the types for event parameters
 export interface EventParams {
   location?: string;
   date?: string;
@@ -13,11 +13,7 @@ export interface EventParams {
   limit?: number;
 }
 
-export interface EventsResponse {
-  events: Event[];
-  pagination: Pagination;
-}
-
+// Define the types for event data
 export interface EventData {
   title: string;
   description: string;
@@ -31,6 +27,13 @@ export interface EventData {
   tags?: string[];
 }
 
+// Define the types for events response
+export interface EventsResponse {
+  events: Event[];
+  pagination: Pagination;
+}
+
+// Define the types for event response
 export interface EventResponse {
   success: boolean;
   message: string;
@@ -41,11 +44,14 @@ export interface EventResponse {
   };
 }
 
+// Create a function to fetch events
 export const getEvents = async (
   params?: EventParams
 ): Promise<EventsResponse> => {
+  // Get the query parameters
   const queryParams = new URLSearchParams();
 
+  // Append the parameters to the query string
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -54,18 +60,22 @@ export const getEvents = async (
     });
   }
 
+  // Construct the URL with query parameters
   const queryString = queryParams.toString()
     ? `?${queryParams.toString()}`
     : '';
+
   return await fetchAPI<EventsResponse>(`/events${queryString}`);
 };
 
+// Create a function to fetch event by ID
 export const getEventById = async (
   eventId: number | string
 ): Promise<Event> => {
   return await fetchAPI<Event>(`/events/${eventId}`);
 };
 
+// Create a function to fetch events by user ID
 export const createEvent = async (
   eventData: EventData
 ): Promise<EventResponse> => {
@@ -75,6 +85,7 @@ export const createEvent = async (
   });
 };
 
+// Create a function to update event
 export const updateEvent = async (
   eventId: number | string,
   eventData: Partial<EventData> & { status?: string }
@@ -85,6 +96,7 @@ export const updateEvent = async (
   });
 };
 
+// Create a function to attend event
 export const attendEvent = async (
   eventId: number | string
 ): Promise<{
@@ -93,6 +105,7 @@ export const attendEvent = async (
   status?: string;
 }> => {
   try {
+    // Fetch the event attendance
     const response = await fetchAPI<{
       success: boolean;
       message: string;
@@ -101,14 +114,16 @@ export const attendEvent = async (
       method: 'POST',
     });
 
-    console.log('이벤트 참가 응답:', response); // 디버깅용 로그
     return response;
   } catch (error) {
-    console.error('이벤트 참가 신청 에러:', error);
-    throw error; // 에러를 호출 컴포넌트에서 처리하도록 다시 throw
+    // Handle the error
+    console.error('⚠️ Failed to attend event:', error);
+
+    throw error;
   }
 };
 
+// Create a function to cancel event attendance
 export const cancelEventAttendance = async (
   eventId: number | string
 ): Promise<EventResponse> => {
@@ -117,6 +132,7 @@ export const cancelEventAttendance = async (
   });
 };
 
+// Create a function to like event
 export const likeEvent = async (
   eventId: number | string
 ): Promise<EventResponse> => {
@@ -125,6 +141,7 @@ export const likeEvent = async (
   });
 };
 
+// Create a function to unlike event
 export const unlikeEvent = async (
   eventId: number | string
 ): Promise<EventResponse> => {
@@ -133,6 +150,7 @@ export const unlikeEvent = async (
   });
 };
 
+// Create a function to fetch liked events
 export const getLikedEvents = async (params?: {
   page?: number;
   limit?: number;
@@ -151,6 +169,5 @@ export const getLikedEvents = async (params?: {
     ? `?${queryParams.toString()}`
     : '';
 
-  // 여기서 "/events/liked" 엔드포인트를 사용하는지 확인
   return await fetchAPI<EventsResponse>(`/events/liked${queryString}`);
 };

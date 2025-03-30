@@ -1,4 +1,4 @@
-// app/lib/api/types.ts// MentorshipConnection 타입 정의에 connection_status 추가
+// Define the types for the mentorship connection data
 export interface MentorshipConnection {
   id: number;
   mentor: {
@@ -19,7 +19,7 @@ export interface MentorshipConnection {
   chat_room_id?: number;
 }
 
-// User 타입 정의에 secondary_role 추가
+// Define the types for the mentorship user data
 export interface User {
   id: number;
   email: string;
@@ -36,6 +36,7 @@ export interface User {
   tags?: string[];
 }
 
+// Define the types for the event
 export interface Event {
   id: number;
   title: string;
@@ -60,6 +61,7 @@ export interface Event {
   attendees?: Array<{ id: number; name: string }>;
 }
 
+// Define the types for the chat room
 export interface ChatRoom {
   id: number;
   name: string;
@@ -76,6 +78,7 @@ export interface ChatRoom {
   created_at: string;
 }
 
+// Define the types for the chat message
 export interface Message {
   id: number;
   chat_room_id: number;
@@ -89,6 +92,7 @@ export interface Message {
   created_at: string;
 }
 
+// Define the types for the mentorship connection data
 export interface MentorshipConnection {
   id: number;
   mentor: {
@@ -109,6 +113,7 @@ export interface MentorshipConnection {
   chat_room_id?: number;
 }
 
+// Define the types for the notification
 export interface Notification {
   id: number;
   type: string;
@@ -119,12 +124,14 @@ export interface Notification {
   created_at: string;
 }
 
+// Define the types for the tag
 export interface Tag {
   id: number;
   name: string;
   category: string;
 }
 
+// Define the types for pagination
 export interface Pagination {
   total: number;
   page: number;
