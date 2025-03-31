@@ -11,6 +11,7 @@ import {
   getEventById,
   cancelEventAttendance,
   likeEvent,
+  attendEvent,
   unlikeEvent,
 } from '@/app/lib/api/event';
 import { Event } from '@/app/lib/api/types';
@@ -96,6 +97,7 @@ export default function EventDetailPage() {
           });
         }
       } else {
+        await attendEvent(id as string);
         setIsAttending(true);
         if (event && user) {
           setEvent({

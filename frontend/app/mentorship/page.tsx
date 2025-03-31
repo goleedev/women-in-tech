@@ -256,7 +256,7 @@ export default function MentorshipPage() {
     setConnectInProgress(selectedUser.id);
     try {
       const response = await connectRequest(selectedUser.id, connectMessage);
-      console.log(response);
+      console.log('Connection request response:', response);
 
       // Update the users state with the new connection status
       setUsers((prev) =>
@@ -273,7 +273,7 @@ export default function MentorshipPage() {
 
       setShowConnectModal(false);
     } catch (err) {
-      console.error('⚠️ Error while updating status:', err);
+      console.error('⚠️ Error while sending connection request:', err);
     } finally {
       setConnectInProgress(null);
     }
@@ -289,6 +289,9 @@ export default function MentorshipPage() {
     switch (userItem.connection_status) {
       case 'pending':
         return <span className="text-yellow-600 text-sm">Pending</span>;
+      case 'accepted':
+        // If accepted but is_connected is false, update it
+        return <span className="text-green-600 text-sm">Connected</span>;
       case 'rejected':
         return <span className="text-red-600 text-sm">Rejected</span>;
       default:
@@ -332,15 +335,33 @@ export default function MentorshipPage() {
               htmlFor="search"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Search
+              Name Search
             </label>
             <input
               id="search"
               name="search"
               type="text"
-              placeholder="Search by name, expertise, etc."
+              placeholder="Search by name"
               className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               value={filters.search}
+              onChange={handleFilterChange}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="country"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Location
+            </label>
+            <input
+              id="country"
+              name="country"
+              type="text"
+              placeholder="Country or location"
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              value={filters.country}
               onChange={handleFilterChange}
             />
           </div>
@@ -377,17 +398,15 @@ export default function MentorshipPage() {
               value={filters.seniority_level}
               onChange={handleFilterChange}
             >
-              <option value="">Select</option>
+              <option value="">All Levels</option>
               <option value="Entry">Entry (0-2 years)</option>
               <option value="Mid-level">Mid Level (3-5 years)</option>
               <option value="Senior">Senior (6+ years)</option>
             </select>
           </div>
 
-          <div className="flex items-end">
-            <Button type="submit" className="w-full">
-              Search
-            </Button>
+          <div className="md:col-span-4 flex justify-end">
+            <Button type="submit">Search</Button>
           </div>
         </form>
       </div>
@@ -462,14 +481,14 @@ export default function MentorshipPage() {
 
                     <div className="flex items-start">
                       <span className="text-gray-500 w-24 text-sm">
-                        Seniority Level:
+                        Seniority:
                       </span>
                       <span>{userItem.seniority_level || '-'}</span>
                     </div>
 
                     <div className="flex items-start">
                       <span className="text-gray-500 w-24 text-sm">
-                        Country:
+                        Location:
                       </span>
                       <span>{userItem.country || '-'}</span>
                     </div>

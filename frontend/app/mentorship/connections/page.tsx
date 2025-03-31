@@ -71,24 +71,31 @@ export default function MentorshipConnectionsPage() {
       // Update connection status to 'accepted'
       await updateConnectionStatus(connectionId, 'accepted');
 
-      // Remove the accepted request from pending requests
+      // Find the accepted request from pending requests
       const acceptedRequest = pendingRequests.find(
         (req) => req.id === connectionId
       );
+
       if (acceptedRequest) {
+        // Remove from pending requests
         setPendingRequests((prev) =>
           prev.filter((req) => req.id !== connectionId)
         );
+
+        // Add to active connections with updated status
         setConnections((prev) => [
           ...prev,
-          { ...acceptedRequest, status: 'accepted' },
+          {
+            ...acceptedRequest,
+            status: 'accepted',
+          },
         ]);
       }
 
-      // Set the active tab to 'active'
+      // Set the active tab to 'active' to show the new connection
       setActiveTab('active');
     } catch (err) {
-      console.error('⚠️ Error while updating mentorship status:', err);
+      console.error('⚠️ Error while accepting mentorship request:', err);
     } finally {
       setActionInProgress(null);
     }
