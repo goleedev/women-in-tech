@@ -401,19 +401,6 @@ export default function ChatRoomPage() {
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
           </Button>
-          <div className="text-sm">
-            {socketService?.isConnected() ? (
-              <span className="text-green-600 flex items-center">
-                <span className="w-2 h-2 bg-green-600 rounded-full mr-1"></span>
-                Connected
-              </span>
-            ) : (
-              <span className="text-yellow-600 flex items-center">
-                <span className="w-2 h-2 bg-yellow-600 rounded-full mr-1"></span>
-                Offline
-              </span>
-            )}
-          </div>
         </div>
       </div>
 

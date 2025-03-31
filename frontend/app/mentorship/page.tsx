@@ -17,8 +17,9 @@ import RoleSwitcher from '../components/mentorship/RuleSwitcher';
 interface MentorshipUser extends User {
   tags: string[];
   similarity_score?: number;
+  match_level?: 'High' | 'Medium' | 'Low';
   is_connected?: boolean;
-  connection_status?: 'pending' | 'accepted' | 'rejected';
+  connection_status?: 'pending' | 'accepted' | 'rejected' | null;
 }
 
 export default function MentorshipPage() {
@@ -58,6 +59,32 @@ export default function MentorshipPage() {
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<MentorshipUser | null>(null);
 
+  const getMatchBadgeColor = (level: 'High' | 'Medium' | 'Low') => {
+    switch (level) {
+      case 'High':
+        return 'bg-green-100 text-green-800';
+      case 'Medium':
+        return 'bg-blue-100 text-blue-800';
+      case 'Low':
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Function to render match badge
+  const renderMatchBadge = (userItem: MentorshipUser) => {
+    if (!user) return null;
+
+    return (
+      <span
+        className={`inline-block text-xs px-2 py-1 rounded-full ${getMatchBadgeColor(
+          userItem.match_level || 'Low'
+        )}`}
+      >
+        {userItem.match_level || 'Low'} Match
+      </span>
+    );
+  };
+
   // Effect to handle role switching
   useEffect(() => {
     // Set the new target role based on the active role
@@ -72,6 +99,61 @@ export default function MentorshipPage() {
     // Reset pagination to the first page
     setPage(1);
   }, [activeRole]);
+
+  // Function to calculate similarity score between current user and other users
+  const calculateSimilarityScore = useCallback(
+    (otherUser: User): number => {
+      if (!user) return 0;
+
+      let score = 0;
+
+      // Check expertise match (weight: 3)
+      if (
+        user.expertise &&
+        otherUser.expertise &&
+        user.expertise.toLowerCase() === otherUser.expertise.toLowerCase()
+      ) {
+        score += 3;
+      }
+
+      // Check profession match (weight: 2)
+      if (
+        user.profession &&
+        otherUser.profession &&
+        user.profession.toLowerCase() === otherUser.profession.toLowerCase()
+      ) {
+        score += 2;
+      }
+
+      // Check country match (weight: 2)
+      if (
+        user.country &&
+        otherUser.country &&
+        user.country.toLowerCase() === otherUser.country.toLowerCase()
+      ) {
+        score += 2;
+      }
+
+      // Check seniority level for mentor-mentee relationship (weight: 1.5 for Senior, 1 for Mid-level)
+      if (activeRole === 'mentee' && otherUser.seniority_level) {
+        if (otherUser.seniority_level === 'Senior') {
+          score += 1.5;
+        } else if (otherUser.seniority_level === 'Mid-level') {
+          score += 1;
+        }
+      }
+
+      return score;
+    },
+    [user, activeRole]
+  );
+
+  // Function to determine match level based on similarity score
+  const getMatchLevel = (score: number): 'High' | 'Medium' | 'Low' => {
+    if (score >= 5) return 'High';
+    if (score >= 3) return 'Medium';
+    return 'Low';
+  };
 
   // Function to fetch users based on filters and pagination
   const fetchUsers = useCallback(async () => {
@@ -88,19 +170,41 @@ export default function MentorshipPage() {
       // Filter out the current user from the list
       const filteredUsers = response.users.filter((u) => u.id !== user?.id);
 
+      // Calculate similarity scores and match levels and ensure connection fields are properly set
+      const usersWithScores = filteredUsers.map((u) => {
+        // Only calculate similarity score if the current user exists
+        const similarityScore = user ? calculateSimilarityScore(u) : 0;
+
+        // Create a properly typed user object with default values for missing fields
+        const enhancedUser: MentorshipUser = {
+          ...u,
+          tags: u.tags || [],
+          similarity_score: similarityScore,
+          match_level: getMatchLevel(similarityScore),
+          is_connected: Boolean(u.is_connected), // Convert to boolean to ensure it's defined
+          connection_status: u.connection_status || null, // Ensure it's either a valid status or null
+        };
+
+        return enhancedUser;
+      });
+
+      // Sort users by similarity score in descending order
+      usersWithScores.sort(
+        (a, b) => (b.similarity_score || 0) - (a.similarity_score || 0)
+      );
+
       // Set the users and pagination data
-      setUsers(filteredUsers);
+      setUsers(usersWithScores);
       setTotalPages(response.pagination.total_pages);
       setError(null);
     } catch (err) {
       // Handle error
       console.error('⚠️ Error while getting users list:', err);
-
       setError('⚠️ Error while getting users list.');
     } finally {
       setLoading(false);
     }
-  }, [filters, page, activeRole, user?.id]);
+  }, [filters, page, activeRole, user, calculateSimilarityScore]);
 
   // Effect to fetch users when the component mounts or when filters change
   useEffect(() => {
@@ -334,11 +438,7 @@ export default function MentorshipPage() {
                 <div className="pt-12 p-6">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-semibold">{userItem.name}</h3>
-                    <span className="inline-block bg-blue-200 text-blue-700 text-xs px-2 py-1 rounded-full">
-                      {(userItem.similarity_score ?? 0) >= 5
-                        ? 'High Match'
-                        : 'Low Match'}
-                    </span>
+                    {renderMatchBadge(userItem)}
                   </div>
 
                   <p className="text-gray-600 mb-4">{userItem.expertise}</p>

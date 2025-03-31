@@ -54,33 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         if (checkAuth()) {
-          // Get the current user from local storage
-          const storedUser = getCurrentUser();
-
-          // Check if the user is in local storage
-          if (storedUser) {
-            // Set the user state with the stored user
-            setUser(storedUser);
-
-            // Check if the user has a valid token
-            const savedRole =
-              localStorage.getItem('activeRole') || storedUser.role;
-
-            // Check if the saved role is valid
-            const validRole =
-              savedRole === storedUser.role ||
-              savedRole === storedUser.secondary_role;
-
-            // Set the active role based on the saved role
-            setActiveRole(validRole ? savedRole : storedUser.role);
-
-            // Set the authentication state to true
-            setIsAuthenticated(true);
-          } else {
-            // If the user is not in local storage, fetch the user data from the API
+          try {
+            // Always fetch the complete user profile from the API
+            // to ensure we have all the needed fields
             const userData = await getMe();
 
-            // Set the user state with the fetched user data
+            // Set the user state with the complete fetched user data
             setUser(userData);
 
             // Set the active role based on the fetched user data
@@ -97,6 +76,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // Set the authentication state to true
             setIsAuthenticated(true);
+          } catch (fetchError) {
+            console.error('⚠️ Error fetching user profile:', fetchError);
+
+            // Fallback to stored user if API call fails
+            const storedUser = getCurrentUser();
+            if (storedUser) {
+              setUser(storedUser);
+              const savedRole =
+                localStorage.getItem('activeRole') || storedUser.role;
+              const validRole =
+                savedRole === storedUser.role ||
+                savedRole === storedUser.secondary_role;
+              setActiveRole(validRole ? savedRole : storedUser.role);
+              setIsAuthenticated(true);
+            } else {
+              // If no stored user, reset authentication
+              setUser(null);
+              setActiveRole('');
+              setIsAuthenticated(false);
+            }
           }
         } else {
           // If the user is not authenticated, set the states to default
@@ -128,15 +127,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       // Call the API login function
-      const response = await apiLogin({ email, password });
+      await apiLogin({ email, password });
 
-      // Set the user state with the response data
-      setUser(response.user);
+      // Get the full user profile after login
+      const fullUserProfile = await getMe();
+
+      // Set the user state with the complete profile data
+      setUser(fullUserProfile);
 
       // Set the active role based on the response data
-      setActiveRole(response.user.role);
+      setActiveRole(fullUserProfile.role);
       // Set the active role in local storage
-      localStorage.setItem('activeRole', response.user.role);
+      localStorage.setItem('activeRole', fullUserProfile.role);
 
       // Set the authentication state to true
       setIsAuthenticated(true);
@@ -195,8 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) return;
 
     try {
-      // Fetch the user data from the API
+      // Fetch the complete user data from the API
       const userData = await getMe();
+
+      // Update localStorage with complete user profile
+      localStorage.setItem('user', JSON.stringify(userData));
+
       // Set the user state with the fetched user data
       setUser(userData);
 

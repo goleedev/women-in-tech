@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 export const Hero = () => {
   return (
     <section className="py-16 md:py-24 text-center px-4">
-      <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        Network Platform for Women in Tech
+      <h1 className="text-4xl md:text-6xl py-10 text-blue-500 font-bold mb-6">
+        Network & Event Platform <br />
+        for Women in Tech
       </h1>
       <p className="text-xl mb-10 max-w-3xl mx-auto text-gray-600">
         Connect with fellow Women in Tech, find mentors, and participate in

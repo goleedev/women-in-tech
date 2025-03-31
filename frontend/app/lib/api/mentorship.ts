@@ -26,6 +26,7 @@ export interface MentorshipUserWithMetadata extends User {
 // Define the types for mentorship user data
 export interface UsersResponse {
   users: MentorshipUserWithMetadata[];
+  currentUser?: User; // Added for frontend similarity calculation
   pagination: Pagination;
 }
 
@@ -81,7 +82,7 @@ export const connectRequest = async (
     connection: { id: number; status: string };
   }>('/mentorship/connect', {
     method: 'POST',
-    body: JSON.stringify({ mentor_id: mentorId, message }),
+    body: JSON.stringify({ mentor_id: Number(mentorId), message }),
   });
 };
 

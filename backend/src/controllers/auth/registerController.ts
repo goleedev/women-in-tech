@@ -42,9 +42,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Create a new user
     const newUser = await pool.query(
       `INSERT INTO users 
-      (email, name, password_hash, expertise, profession, seniority_level, country, role, secondary_role, bio) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-      RETURNING id, email, name, role, secondary_role`,
+  (email, name, password_hash, expertise, profession, seniority_level, country, role, secondary_role, bio) 
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+  RETURNING id, email, name, role, secondary_role`,
       [
         email,
         name,

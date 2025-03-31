@@ -56,11 +56,20 @@ export const login = async (
     body: JSON.stringify(credentials),
   });
 
-  // Store the token and user information in local storage
+  // Store the token in local storage
   localStorage.setItem('token', data.token);
-  localStorage.setItem('user', JSON.stringify(data.user));
 
-  return data;
+  // Get the full user profile after login
+  const fullUserProfile = await getMe();
+
+  // Store the complete user information in local storage
+  localStorage.setItem('user', JSON.stringify(fullUserProfile));
+
+  // Return the login response with the complete user profile
+  return {
+    ...data,
+    user: fullUserProfile,
+  };
 };
 
 // Create logout function
