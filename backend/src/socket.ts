@@ -35,7 +35,11 @@ enum AuthenticationSuccessMessage {
 export const setUpSocket = (server: Server) => {
   const io = new SocketServer(server, {
     cors: {
-      origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+      origin: [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        process.env.FRONTEND_URL || 'https://women-in-tech-seven.vercel.app/',
+      ],
       methods: ['GET', 'POST'],
       credentials: true,
     },

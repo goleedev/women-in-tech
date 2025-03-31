@@ -2,7 +2,8 @@
 
 // Define the base URL for the API
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://women-in-tech-backend.onrender.com/api/v1';
 
 // create a function to fetch data from the API
 export async function fetchAPI<T>(

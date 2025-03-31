@@ -58,13 +58,24 @@ export class SocketService {
     // Create a new connection promise
     this.connectionPromise = new Promise((resolve) => {
       try {
-        // Define WebSocket URL
-        const wsProtocol =
-          window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Use the same hostname and port as the current page
-        const hostname = window.location.hostname;
-        const port = '5001';
-        const wsUrl = `${wsProtocol}//${hostname}:${port}`;
+        // Define WebSocket URL using environment variable or fallback
+        const wsUrl =
+          process.env.NEXT_PUBLIC_WS_URL ||
+          (() => {
+            const wsProtocol =
+              window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const hostname = window.location.hostname;
+            // If we're in production (Vercel), use the backend URL
+            if (
+              hostname.includes('vercel.app') ||
+              process.env.NODE_ENV === 'production'
+            ) {
+              return `wss://women-in-tech-backend.onrender.com`;
+            }
+            // Otherwise use local development settings
+            const port = '5001';
+            return `${wsProtocol}//${hostname}:${port}`;
+          })();
 
         // Create a new WebSocket connection
         this.socket = new WebSocket(wsUrl);
